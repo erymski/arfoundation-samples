@@ -8,7 +8,7 @@ public class PlaceOverPlane : MonoBehaviour
 {
     [SerializeField]
     [Tooltip("Instantiates this prefab on a plane at the touch location.")]
-    GameObject m_PlacedPrefab;
+    private GameObject m_PlacedPrefab;
 
     /// <summary>
     /// The prefab to instantiate on touch.
@@ -19,13 +19,48 @@ public class PlaceOverPlane : MonoBehaviour
         set { m_PlacedPrefab = value; }
     }
 
-
     private ARRaycastManager _raycastManager;
 
     /// <summary>
     /// The object instantiated as a result of a successful raycast intersection with a plane.
     /// </summary>
-    public GameObject spawnedObject { get; private set; }
+    private GameObject SpawnedObject { get; set; }
+
+    /// <summary>
+    /// Bound for the prefab.
+    /// </summary>
+    private Bounds Bounds
+    {
+        get
+        {
+            while (! _bounds.HasValue)
+            {
+                var meshFilters = m_PlacedPrefab.GetComponentsInChildren<MeshFilter>();
+                if (meshFilters == null)
+                {
+                    Debug.LogError("Cannot detect meshes in the prefab");
+                    break;
+                }
+
+                Debug.LogFormat("***** Meshes count: {0}", meshFilters.Length);
+                if (meshFilters.Length == 0) break;
+
+                var firstBound = meshFilters[0].mesh.bounds;
+                var bounds = new Bounds(firstBound.center, firstBound.size);
+                for (int i = 1; i < meshFilters.Length; i++)
+                {
+                    bounds.Encapsulate(meshFilters[i].mesh.bounds);
+                }
+
+                Debug.LogFormat("**** BOUNDS: {0}", bounds.ToString());
+                _bounds = bounds;
+                break;
+            }
+
+            return _bounds.GetValueOrDefault();
+        }
+    }
+    private Bounds? _bounds;
 
     void Awake()
     {
@@ -66,35 +101,17 @@ public class PlaceOverPlane : MonoBehaviour
             // will be the closest hit.
             Pose hitPose = hits[0].pose;
 
-            if (spawnedObject == null)
+            // origin is at the center, so move position in Y+ direction to place object over the plane
+            var hitPosition = hitPose.position;
+            hitPosition.y += (Bounds.size.y / 2);
+
+            if (SpawnedObject == null)
             {
-                var meshFilters = m_PlacedPrefab.GetComponentsInChildren<MeshFilter>();
-                Debug.LogWarningFormat("***** FILTER: {0}", meshFilters == null);
-                if (meshFilters == null) return;
-
-                Debug.LogWarningFormat("***** FILTER COUNT: {0}", meshFilters.Length);
-                if (meshFilters.Length == 0) return;
-
-
-                var firstBound = meshFilters[0].mesh.bounds;
-                var bounds = new Bounds(firstBound.center, firstBound.size);
-                for (int i = 1; i < meshFilters.Length; i++)
-                {
-                    bounds.Encapsulate(meshFilters[i].mesh.bounds);
-                }
-
-                Debug.LogWarningFormat("**** BOUNDS: {0}", bounds.ToString());
-
-                //var mesh = meshFilters.mesh;
-                //var shared = meshFilters.sharedMesh;
-
-                //Debug.LogWarningFormat("***** PLACE OBJECT: {0}, {1}", mesh == null, shared == null);
-
-                spawnedObject = Instantiate(m_PlacedPrefab, hitPose.position, hitPose.rotation);
+                SpawnedObject = Instantiate(m_PlacedPrefab, hitPosition, hitPose.rotation);
             }
             else
             {
-                spawnedObject.transform.position = hitPose.position;
+                SpawnedObject.transform.position = hitPosition;
             }
         }
     }
