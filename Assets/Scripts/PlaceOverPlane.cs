@@ -30,6 +30,7 @@ public class PlaceOverPlane : MonoBehaviour
     void Awake()
     {
         _raycastManager = GetComponent<ARRaycastManager>();
+        Application.targetFrameRate = 60;
     }
 
     bool TryGetTouchPosition(out Vector2 touchPosition)
@@ -61,19 +62,33 @@ public class PlaceOverPlane : MonoBehaviour
         var hits = new List<ARRaycastHit>();
         if (_raycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
         {
-//            Trace.TraceWarning("**** FOUND: " + hits.Count.ToString());
-            Debug.Log("**** FOUND: " + hits.Count.ToString());
-
             // Raycast hits are sorted by distance, so the first one
             // will be the closest hit.
-            var hitPose = hits[0].pose;
+            Pose hitPose = hits[0].pose;
 
             if (spawnedObject == null)
             {
-                //m_PlacedPrefab.tr
+                var meshFilters = m_PlacedPrefab.GetComponentsInChildren<MeshFilter>();
+                Debug.LogWarningFormat("***** FILTER: {0}", meshFilters == null);
+                if (meshFilters == null) return;
 
-//                Trace.TraceWarning("***** PLACE OBJECT ************");
-                Debug.LogWarning("***** PLACE OBJECT ************");
+                Debug.LogWarningFormat("***** FILTER COUNT: {0}", meshFilters.Length);
+                if (meshFilters.Length == 0) return;
+
+
+                var firstBound = meshFilters[0].mesh.bounds;
+                var bounds = new Bounds(firstBound.center, firstBound.size);
+                for (int i = 1; i < meshFilters.Length; i++)
+                {
+                    bounds.Encapsulate(meshFilters[i].mesh.bounds);
+                }
+
+                Debug.LogWarningFormat("**** BOUNDS: {0}", bounds.ToString());
+
+                //var mesh = meshFilters.mesh;
+                //var shared = meshFilters.sharedMesh;
+
+                //Debug.LogWarningFormat("***** PLACE OBJECT: {0}, {1}", mesh == null, shared == null);
 
                 spawnedObject = Instantiate(m_PlacedPrefab, hitPose.position, hitPose.rotation);
             }
