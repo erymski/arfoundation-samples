@@ -271,9 +271,10 @@ namespace Assets.Scripts
         public string deeplinkURL;
         private void Awake()
         {
-            Log(" -----------************ AWAKE !");
             if (Instance == null)
             {
+                Log("Register deep link handler");
+
                 Instance = this;
                 Application.deepLinkActivated += onDeepLinkActivated;
                 if (!string.IsNullOrEmpty(Application.absoluteURL))
@@ -293,6 +294,7 @@ namespace Assets.Scripts
 
         IEnumerator LoadTextFromServer(string url, Action<string> response)
         {
+            Log($"Loading text from {url}");
             var request = UnityWebRequest.Get(url);
 
             yield return request.SendWebRequest();
@@ -303,7 +305,7 @@ namespace Assets.Scripts
             }
             else
             {
-                Debug.LogErrorFormat("error request [{0}, {1}]", url, request.error);
+                Log($"Error request [{url}, {request.error}]");
        
                 response(null);
             }
@@ -316,21 +318,21 @@ namespace Assets.Scripts
             // Update DeepLink Manager global variable, so URL can be accessed from anywhere.
             deeplinkURL = url;
 
-            Log("**************** Link activated: " + url);
+            Log("Link activated: " + url);
 
             string urlObj = @"http://defa38f68794.ngrok.io/container.obj";
             StartCoroutine(LoadTextFromServer(urlObj, content =>
             {
                 if (content != null)
                 {
-                    Debug.Log("****** OBJ loaded");
+                    Log("Content loaded");
                     Mesh mesh = FastObjImporter.Instance.ImportContent(content);
-                    Debug.LogFormat("Loaded {0} vertices", mesh.vertices.Length);
+                    Log($"Imported mesh with {mesh.vertices.Length} vertices");
                 }
             }));
 
 
-            Mesh myMesh = FastObjImporter.Instance.ImportContent("path_to_obj_file.obj");
+//            Mesh myMesh = FastObjImporter.Instance.ImportContent("path_to_obj_file.obj");
 
             //// Decode the URL to determine action. 
             //// In this example, the app expects a link formatted like this:
