@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Assets.Scripts;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
@@ -35,14 +36,14 @@ public class PlaceOverPlane : MonoBehaviour
         {
             while (! _bounds.HasValue)
             {
-                var meshFilters = m_PlacedPrefab.GetComponentsInChildren<MeshFilter>();
+                var meshFilters = Template.GetComponentsInChildren<MeshFilter>();
                 if (meshFilters == null)
                 {
-                    Debug.LogError("Cannot detect meshes in the prefab");
+                    LogMessage("Cannot detect meshes in the prefab");
                     break;
                 }
 
-                Debug.LogFormat("***** Meshes count: {0}", meshFilters.Length);
+                LogMessage($"***** Meshes count: {meshFilters.Length}");
                 if (meshFilters.Length == 0) break;
 
                 var firstBound = meshFilters[0].mesh.bounds;
@@ -52,7 +53,7 @@ public class PlaceOverPlane : MonoBehaviour
                     bounds.Encapsulate(meshFilters[i].mesh.bounds);
                 }
 
-                Debug.LogFormat("**** BOUNDS: {0}", bounds.ToString());
+                LogMessage($"**** BOUNDS: {bounds}");
                 _bounds = bounds;
                 break;
             }
@@ -60,7 +61,38 @@ public class PlaceOverPlane : MonoBehaviour
             return _bounds.GetValueOrDefault();
         }
     }
+
+
     private Bounds? _bounds;
+
+    /// <summary>
+    /// Template to be instantiated on touch.
+    /// </summary>
+    private GameObject Template
+    {
+        get
+        {
+            if (_customTemplate) return _customTemplate;
+
+            var manager = ProcessDeepLinkManager.Instance;
+            if (manager.LoadedMesh == null) return m_PlacedPrefab;
+
+            manager.Log("Creating a new template");
+
+            _customTemplate = new GameObject("LD2020 template");
+            var meshFilter = _customTemplate.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = manager.LoadedMesh;
+
+            var meshRenderer = _customTemplate.AddComponent<MeshRenderer>();
+            meshRenderer.material = new Material(Shader.Find("Standard"));
+
+            _bounds = null;
+
+            return _customTemplate;
+        }
+    }
+
+    private GameObject _customTemplate;
 
     void Awake()
     {
@@ -107,12 +139,16 @@ public class PlaceOverPlane : MonoBehaviour
 
             if (SpawnedObject == null)
             {
-                SpawnedObject = Instantiate(m_PlacedPrefab, hitPosition, hitPose.rotation);
+                LogMessage("Placing new object");
+                SpawnedObject = Instantiate(Template, hitPosition, hitPose.rotation);
             }
             else
             {
+                LogMessage("Moving existing object");
                 SpawnedObject.transform.position = hitPosition;
             }
         }
     }
+
+    private static void LogMessage(string message) => ProcessDeepLinkManager.Instance.Log(message);
 }

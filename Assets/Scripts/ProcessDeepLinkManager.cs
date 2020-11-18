@@ -259,7 +259,7 @@ namespace Assets.Scripts
             set { m_LogText = value; }
         }
 
-        private void Log(string message)
+        public void Log(string message)
         {
             Debug.LogError(message);
 
@@ -267,6 +267,8 @@ namespace Assets.Scripts
         }
 
         public static ProcessDeepLinkManager Instance { get; private set; }
+
+        public Mesh LoadedMesh { get; private set; }
 
         public string deeplinkURL;
         private void Awake()
@@ -326,10 +328,12 @@ namespace Assets.Scripts
                 if (content != null)
                 {
                     Log("Content loaded");
-                    Mesh mesh = FastObjImporter.Instance.ImportContent(content);
-                    Log($"Imported mesh with {mesh.vertices.Length} vertices");
+                    LoadedMesh = FastObjImporter.Instance.ImportContent(content);
+                    Log($"Imported mesh with {LoadedMesh.vertices.Length} vertices");
                 }
             }));
+
+            
 
 
 //            Mesh myMesh = FastObjImporter.Instance.ImportContent("path_to_obj_file.obj");
