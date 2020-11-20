@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Assets.Scripts
 {
-    public sealed class FastObjImporter
+    public sealed class ObjImporter
     {
         private sealed class Vector3Int
         {
@@ -23,21 +23,14 @@ namespace Assets.Scripts
         #region singleton
         // Singleton code
         // Static can be called from anywhere without having to make an instance
-        private static FastObjImporter _instance;
+        private static ObjImporter _instance;
 
         // If called check if there is an instance, otherwise create it
-        public static FastObjImporter Instance
+        public static ObjImporter Instance
         {
-            get { return _instance ?? (_instance = new FastObjImporter()); }
+            get { return _instance ?? (_instance = new ObjImporter()); }
         }
         #endregion
-
-        private List<int> triangles;
-        private List<Vector3> vertices;
-        private List<Vector2> uv;
-        private List<Vector3> normals;
-        private List<Vector3Int> faceData;
-        private List<int> intArray;
 
         private const int MIN_POW_10 = -16;
         private const int MAX_POW_10 = 16;
@@ -47,50 +40,19 @@ namespace Assets.Scripts
         // Use this for initialization
         public Mesh ImportContent(string content)
         {
-            triangles = new List<int>();
-            vertices = new List<Vector3>();
-            uv = new List<Vector2>();
-            normals = new List<Vector3>();
-            faceData = new List<Vector3Int>();
-            intArray = new List<int>();
-
-            LoadMeshData(content);
-
-            Vector3[] newVerts = new Vector3[faceData.Count];
-            Vector2[] newUVs = new Vector2[faceData.Count];
-            Vector3[] newNormals = new Vector3[faceData.Count];
-
-            /* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
-                 * for the appropriate Unity mesh array.
-                 */
-            for (int i = 0; i < faceData.Count; i++)
-            {
-                newVerts[i] = vertices[faceData[i].x - 1];
-                if (faceData[i].y >= 1)
-                    newUVs[i] = uv[faceData[i].y - 1];
-
-                if (faceData[i].z >= 1)
-                    newNormals[i] = normals[faceData[i].z - 1];
-            }
-
-            var mesh = new Mesh
-            {
-                vertices = newVerts,
-                uv = newUVs,
-                normals = newNormals,
-                triangles = triangles.ToArray()
-            };
-
-
-            mesh.RecalculateBounds();
-            mesh.Optimize();
-
-            return mesh;
+            return LoadMeshData(content);
         }
 
-        private void LoadMeshData(string text)
+        private static Mesh LoadMeshData(string text)
         {
-            StringBuilder sb = new StringBuilder();
+            var triangles = new List<int>();
+            var vertices = new List<Vector3>();
+            var uv = new List<Vector2>();
+            var normals = new List<Vector3>();
+            var faceData = new List<Vector3Int>();
+            var intArray = new List<int>();
+            var sb = new StringBuilder();
+
             int start = 0;
             string objectName = null;
             int faceDataCount = 0;
@@ -174,9 +136,40 @@ namespace Assets.Scripts
                     }
                 }
             }
+
+            var newVerts = new Vector3[faceData.Count];
+            var newUVs = new Vector2[faceData.Count];
+            var newNormals = new Vector3[faceData.Count];
+
+            /* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
+             * for the appropriate Unity mesh array.
+             */
+            for (int i = 0; i < faceData.Count; i++)
+            {
+                newVerts[i] = vertices[faceData[i].x - 1];
+                if (faceData[i].y >= 1)
+                    newUVs[i] = uv[faceData[i].y - 1];
+
+                if (faceData[i].z >= 1)
+                    newNormals[i] = normals[faceData[i].z - 1];
+            }
+
+            var mesh = new Mesh
+            {
+                vertices = newVerts,
+                uv = newUVs,
+                normals = newNormals,
+                triangles = triangles.ToArray()
+            };
+
+
+            mesh.RecalculateBounds();
+            mesh.Optimize();
+
+            return mesh;
         }
 
-        private float GetFloat(StringBuilder sb, ref int start, ref StringBuilder sbFloat)
+        private static float GetFloat(StringBuilder sb, ref int start, ref StringBuilder sbFloat)
         {
             sbFloat.Remove(0, sbFloat.Length);
             while (start < sb.Length &&
@@ -190,7 +183,7 @@ namespace Assets.Scripts
             return ParseFloat(sbFloat);
         }
 
-        private int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
+        private static int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
         {
             sbInt.Remove(0, sbInt.Length);
             while (start < sb.Length &&
@@ -214,7 +207,7 @@ namespace Assets.Scripts
             return result;
         }
 
-        private float ParseFloat(StringBuilder value)
+        private static float ParseFloat(StringBuilder value)
         {
             float result = 0;
             bool negate = false;
@@ -237,7 +230,7 @@ namespace Assets.Scripts
             return result;
         }
 
-        private int IntParseFast(StringBuilder value)
+        private static int IntParseFast(StringBuilder value)
         {
             // An optimized int parse method.
             int result = 0;

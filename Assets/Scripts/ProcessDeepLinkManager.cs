@@ -106,7 +106,7 @@ namespace Assets.Scripts
 
                             using (var reader = new StreamReader(entry.Open()))
                             {
-                                LoadedMesh = FastObjImporter.Instance.ImportContent(reader.ReadToEnd());
+                                LoadedMesh = ObjImporter.Instance.ImportContent(reader.ReadToEnd());
                             }
                         }
 
