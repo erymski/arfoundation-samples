@@ -44,11 +44,11 @@ namespace Assets.Scripts
                 Log("Register deep link handler");
 
                 Instance = this;
-                Application.deepLinkActivated += onDeepLinkActivated;
+                Application.deepLinkActivated += HandleLink;
                 if (!string.IsNullOrEmpty(Application.absoluteURL))
                 {
                     // Cold start and Application.absoluteURL not null so process Deep Link.
-                    onDeepLinkActivated(Application.absoluteURL);
+                    HandleLink(Application.absoluteURL);
                 }
                 // Initialize DeepLink Manager global variable.
                 else deeplinkURL = "[none]";
@@ -60,7 +60,7 @@ namespace Assets.Scripts
             }
         }
 
-        IEnumerator LoadTextFromServer(string url, Action<byte[]> response)
+        private IEnumerator LoadDataFromServer(string url, Action<byte[]> response)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -82,14 +82,14 @@ namespace Assets.Scripts
             request.Dispose();
         }
 
-        private void onDeepLinkActivated(string url)
+        private void HandleLink(string url)
         {
             Log("Link activated: " + url);
 
             // Update DeepLink Manager global variable, so URL can be accessed from anywhere.
             deeplinkURL = url.Replace("ld2020", "http");
 
-            StartCoroutine(LoadTextFromServer(deeplinkURL, content =>
+            StartCoroutine(LoadDataFromServer(deeplinkURL, content =>
             {
                 if (content != null)
                 {
@@ -110,7 +110,7 @@ namespace Assets.Scripts
 
                             using (var reader = new StreamReader(entry.Open()))
                             {
-                                LoadedMeshes = ObjImporter.Instance.ImportContent(reader.ReadToEnd());
+                                LoadedMeshes = ObjImporter.Process(reader.ReadToEnd());
                             }
                         }
 

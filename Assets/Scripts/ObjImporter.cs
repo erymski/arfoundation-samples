@@ -73,19 +73,6 @@ namespace Assets.Scripts
 
         #endregion
 
-        #region singleton
-
-        // Singleton code
-        // Static can be called from anywhere without having to make an instance
-        private static ObjImporter _instance;
-
-        // If called check if there is an instance, otherwise create it
-        public static ObjImporter Instance
-        {
-            get { return _instance ?? (_instance = new ObjImporter()); }
-        }
-        #endregion
-
         private const int MIN_POW_10 = -16;
 
         private const int MAX_POW_10 = 16;
@@ -94,7 +81,7 @@ namespace Assets.Scripts
 
         private static readonly float[] pow10 = GenerateLookupTable();
 
-        public Mesh[] ImportContent(string objContent)
+        public static Mesh[] Process(string objContent)
         {
             var collectors = new List<MeshCollector>();
             var collector = new MeshCollector(); // not necessary to init, but need to make it safe
@@ -209,8 +196,7 @@ namespace Assets.Scripts
         private static int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
         {
             sbInt.Remove(0, sbInt.Length);
-            while (start < sb.Length &&
-                   (char.IsDigit(sb[start])))
+            while (start < sb.Length && char.IsDigit(sb[start]))
             {
                 sbInt.Append(sb[start]);
                 start++;
@@ -225,8 +211,7 @@ namespace Assets.Scripts
         {
             var result = new float[(-MIN_POW_10 + MAX_POW_10) * 10];
             for (int i = 0; i < result.Length; i++)
-                result[i] = (float)((i / NUM_POWS_10) *
-                                    Mathf.Pow(10, i % NUM_POWS_10 + MIN_POW_10));
+                result[i] = i * Mathf.Pow(10, i % NUM_POWS_10 + MIN_POW_10) / NUM_POWS_10;
             return result;
         }
 
