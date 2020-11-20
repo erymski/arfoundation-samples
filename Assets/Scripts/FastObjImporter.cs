@@ -170,7 +170,7 @@ namespace Assets.Scripts
                     }
                     else if (cmd == 'g')
                     {
-                        ProcessDeepLinkManager.Instance.Log(sb.ToString());
+                        //ProcessDeepLinkManager.Instance.Log(sb.ToString());
                     }
                 }
             }

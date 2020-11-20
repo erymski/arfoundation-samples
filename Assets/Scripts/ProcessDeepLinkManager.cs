@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
@@ -54,18 +56,17 @@ namespace Assets.Scripts
             }
         }
 
-        IEnumerator LoadTextFromServer(string url, Action<string> response)
+        IEnumerator LoadTextFromServer(string url, Action<byte[]> response)
         {
             var stopwatch = Stopwatch.StartNew();
             Log($"Loading text from {url}");
             var request = UnityWebRequest.Get(url);
-
             yield return request.SendWebRequest();
             Log($"Loaded in {stopwatch.Elapsed.TotalSeconds:F3} sec");
 
             if (! request.isHttpError && ! request.isNetworkError)
             {
-                response(request.downloadHandler.text);
+                response(request.downloadHandler.data);
             }
             else
             {
@@ -88,9 +89,33 @@ namespace Assets.Scripts
             {
                 if (content != null)
                 {
-                    var stopwatch = Stopwatch.StartNew();
-                    LoadedMesh = FastObjImporter.Instance.ImportContent(content);
-                    Log($"Imported mesh with {LoadedMesh.vertices.Length} vertices in {stopwatch.Elapsed.TotalSeconds:F3} sec");
+                    try
+                    {
+                        var stopwatch = Stopwatch.StartNew();
+
+                        // read OBJ file from ZIP
+                        using (var ms = new MemoryStream(content))
+                        using (var zip = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: false))
+                        {
+                            ZipArchiveEntry entry = zip.GetEntry("result.obj");
+                            if (entry == null)
+                            {
+                                Log("Cannot find OBJ file");
+                                return;
+                            }
+
+                            using (var reader = new StreamReader(entry.Open()))
+                            {
+                                LoadedMesh = FastObjImporter.Instance.ImportContent(reader.ReadToEnd());
+                            }
+                        }
+
+                        Log($"Imported mesh with {LoadedMesh.vertices.Length} vertices in {stopwatch.Elapsed.TotalSeconds:F3} sec");
+                    }
+                    catch (Exception e)
+                    {
+                        Log(e.ToString());
+                    }
                 }
             }));
         }
