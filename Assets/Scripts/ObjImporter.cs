@@ -43,14 +43,53 @@ namespace Assets.Scripts
             return LoadMeshData(content);
         }
 
+        private class MeshCollector
+        {
+            public readonly List<int> triangles = new List<int>();
+            public readonly List<Vector3> vertices = new List<Vector3>();
+            public readonly List<Vector2> uv = new List<Vector2>();
+            public readonly List<Vector3> normals = new List<Vector3>();
+            public readonly List<Vector3Int> faceData = new List<Vector3Int>();
+            public readonly List<int> intArray = new List<int>();
+
+            public Mesh ToMesh()
+            {
+                var newVerts = new Vector3[faceData.Count];
+                var newUVs = new Vector2[faceData.Count];
+                var newNormals = new Vector3[faceData.Count];
+
+                /* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
+                 * for the appropriate Unity mesh array.
+                 */
+                for (int i = 0; i < faceData.Count; i++)
+                {
+                    newVerts[i] = vertices[faceData[i].x - 1];
+                    if (faceData[i].y >= 1)
+                        newUVs[i] = uv[faceData[i].y - 1];
+
+                    if (faceData[i].z >= 1)
+                        newNormals[i] = normals[faceData[i].z - 1];
+                }
+
+                var mesh = new Mesh
+                {
+                    vertices = newVerts,
+                    uv = newUVs,
+                    normals = newNormals,
+                    triangles = triangles.ToArray()
+                };
+
+
+                mesh.RecalculateBounds();
+                mesh.Optimize();
+                return mesh;
+            }
+        }
+
         private static Mesh LoadMeshData(string text)
         {
-            var triangles = new List<int>();
-            var vertices = new List<Vector3>();
-            var uv = new List<Vector2>();
-            var normals = new List<Vector3>();
-            var faceData = new List<Vector3Int>();
-            var intArray = new List<int>();
+            var collector = new MeshCollector();
+
             var sb = new StringBuilder();
 
             int start = 0;
@@ -84,21 +123,21 @@ namespace Assets.Scripts
                     {
                         int splitStart = 2;
 
-                        vertices.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
+                        collector.vertices.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
                             GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
                     }
                     else if (cmd == 'v' && sb[1] == 't' && sb[2] == ' ') // UV
                     {
                         int splitStart = 3;
 
-                        uv.Add(new Vector2(GetFloat(sb, ref splitStart, ref sbFloat),
+                        collector.uv.Add(new Vector2(GetFloat(sb, ref splitStart, ref sbFloat),
                             GetFloat(sb, ref splitStart, ref sbFloat)));
                     }
                     else if (cmd == 'v' && sb[1] == 'n' && sb[2] == ' ') // Normals
                     {
                         int splitStart = 3;
 
-                        normals.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
+                        collector.normals.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
                             GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
                     }
                     else if (cmd == 'f' && sb[1] == ' ')
@@ -106,16 +145,16 @@ namespace Assets.Scripts
                         int splitStart = 2;
 
                         int j = 1;
-                        intArray.Clear();
+                        collector.intArray.Clear();
                         int info = 0;
                         // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
                         while (splitStart < sb.Length && char.IsDigit(sb[splitStart]))
                         {
-                            faceData.Add(new Vector3Int(GetInt(sb, ref splitStart, ref sbFloat),
+                            collector.faceData.Add(new Vector3Int(GetInt(sb, ref splitStart, ref sbFloat),
                                 GetInt(sb, ref splitStart, ref sbFloat), GetInt(sb, ref splitStart, ref sbFloat)));
                             j++;
 
-                            intArray.Add(faceDataCount);
+                            collector.intArray.Add(faceDataCount);
                             faceDataCount++;
                         }
 
@@ -123,9 +162,9 @@ namespace Assets.Scripts
                         j = 1;
                         while (j + 2 < info) //Create triangles out of the face data.  There will generally be more than 1 triangle per face.
                         {
-                            triangles.Add(intArray[0]);
-                            triangles.Add(intArray[j]);
-                            triangles.Add(intArray[j + 1]);
+                            collector.triangles.Add(collector.intArray[0]);
+                            collector.triangles.Add(collector.intArray[j]);
+                            collector.triangles.Add(collector.intArray[j + 1]);
 
                             j++;
                         }
@@ -137,34 +176,7 @@ namespace Assets.Scripts
                 }
             }
 
-            var newVerts = new Vector3[faceData.Count];
-            var newUVs = new Vector2[faceData.Count];
-            var newNormals = new Vector3[faceData.Count];
-
-            /* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
-             * for the appropriate Unity mesh array.
-             */
-            for (int i = 0; i < faceData.Count; i++)
-            {
-                newVerts[i] = vertices[faceData[i].x - 1];
-                if (faceData[i].y >= 1)
-                    newUVs[i] = uv[faceData[i].y - 1];
-
-                if (faceData[i].z >= 1)
-                    newNormals[i] = normals[faceData[i].z - 1];
-            }
-
-            var mesh = new Mesh
-            {
-                vertices = newVerts,
-                uv = newUVs,
-                normals = newNormals,
-                triangles = triangles.ToArray()
-            };
-
-
-            mesh.RecalculateBounds();
-            mesh.Optimize();
+            var mesh = collector.ToMesh();
 
             return mesh;
         }
