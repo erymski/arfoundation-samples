@@ -6,12 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 0
-    path: Assets/Scenes/ARCollaborationData/ARCollaborationDataExample.unity
-    guid: 900e7bfe6122645fba71b90941afb9c5
-  - enabled: 0
-    path: Assets/Scenes/ARKitCoachingOverlay/ARKitCoachingOverlay.unity
-    guid: 98afc3855ff0b426f81ac1d7c646b6c1
-  - enabled: 0
     path: Assets/Scenes/ARWorldMap.unity
     guid: 8d8902fd0b55449dcbf3572b49d6b1b1
   - enabled: 0
@@ -26,33 +20,6 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/EnvironmentProbes.unity
     guid: d568d188cadf141e38769dbabd3fe385
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/ARCoreFaceRegions.unity
-    guid: d1739ac106ca65e4b83528a440314bd9
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/ARKitFaceBlendShapes.unity
-    guid: e9280441e79e84bdbbf6b724880ae2d9
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/EyeLasers.unity
-    guid: c8ca2b95503fe4a7194f37bfbe5e4688
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/EyePoses.unity
-    guid: 19344822e252a420e94db72338383cbc
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/FaceMesh.unity
-    guid: 047514b96a5d44d6bb0acbfa06ace943
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/FacePose.unity
-    guid: d8b65509a10894e1dbb93c799ececfd9
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/FixationPoint.unity
-    guid: b0bf27dc892684a049959459ba5e6f8f
-  - enabled: 0
-    path: Assets/Scenes/FaceTracking/RearCameraWithFrontCameraFaceMesh.unity
-    guid: ecea31d2ea5464e52bedb91fa1fcb6bb
-  - enabled: 0
-    path: Assets/Scenes/ImageTracking/ImageTracking.unity
-    guid: e0b018a3c3b5cfd4c8e316706ec0a18c
   - enabled: 0
     path: Assets/Scenes/LightEstimation.unity
     guid: 2f0cbc82480584c258f99f0d9e4ba302
