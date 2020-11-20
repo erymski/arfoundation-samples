@@ -75,13 +75,18 @@ public class PlaceOverPlane : MonoBehaviour
             if (_customTemplate) return _customTemplate;
 
             var manager = ProcessDeepLinkManager.Instance;
-            if (manager.LoadedMesh == null) return m_PlacedPrefab;
+            var meshes = manager.LoadedMeshes;
+            if (meshes == null) return m_PlacedPrefab;
 
             manager.Log("Creating a new template");
 
             _customTemplate = new GameObject("LD2020 template");
-            var meshFilter = _customTemplate.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = manager.LoadedMesh;
+
+            for (int i = 0; i < meshes.Length; i++)
+            {
+                var meshFilter = _customTemplate.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = meshes[i];
+            }
 
             var meshRenderer = _customTemplate.AddComponent<MeshRenderer>();
             meshRenderer.material = new Material(Shader.Find("Standard"));

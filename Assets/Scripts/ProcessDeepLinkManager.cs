@@ -30,9 +30,13 @@ namespace Assets.Scripts
 
         public static ProcessDeepLinkManager Instance { get; private set; }
 
-        public Mesh LoadedMesh { get; private set; }
+        /// <summary>
+        /// Meshes imported from loaded OBJ file.
+        /// </summary>
+        public Mesh[] LoadedMeshes { get; private set; }
 
         public string deeplinkURL;
+
         private void Awake()
         {
             if (Instance == null)
@@ -59,11 +63,12 @@ namespace Assets.Scripts
         IEnumerator LoadTextFromServer(string url, Action<byte[]> response)
         {
             var stopwatch = Stopwatch.StartNew();
+
             Log($"Loading text from {url}");
             var request = UnityWebRequest.Get(url);
             yield return request.SendWebRequest();
-            Log($"Loaded in {stopwatch.Elapsed.TotalSeconds:F3} sec");
 
+            Log($"Loaded in {stopwatch.Elapsed.TotalSeconds:F3} sec");
             if (! request.isHttpError && ! request.isNetworkError)
             {
                 response(request.downloadHandler.data);
@@ -71,7 +76,6 @@ namespace Assets.Scripts
             else
             {
                 Log($"Error request [{url}, {request.error}]");
-       
                 response(null);
             }
 
@@ -106,11 +110,11 @@ namespace Assets.Scripts
 
                             using (var reader = new StreamReader(entry.Open()))
                             {
-                                LoadedMesh = ObjImporter.Instance.ImportContent(reader.ReadToEnd());
+                                LoadedMeshes = ObjImporter.Instance.ImportContent(reader.ReadToEnd());
                             }
                         }
 
-                        Log($"Imported mesh with {LoadedMesh.vertices.Length} vertices in {stopwatch.Elapsed.TotalSeconds:F3} sec");
+                        Log($"Imported {LoadedMeshes.Length} mesh(es) in {stopwatch.Elapsed.TotalSeconds:F3} sec");
                     }
                     catch (Exception e)
                     {

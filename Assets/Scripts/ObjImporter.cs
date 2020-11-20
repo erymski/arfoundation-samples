@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 
@@ -6,6 +8,8 @@ namespace Assets.Scripts
 {
     public sealed class ObjImporter
     {
+        #region Inner types
+
         private sealed class Vector3Int
         {
             public int x { get; }
@@ -20,29 +24,6 @@ namespace Assets.Scripts
             }
         }
 
-        #region singleton
-        // Singleton code
-        // Static can be called from anywhere without having to make an instance
-        private static ObjImporter _instance;
-
-        // If called check if there is an instance, otherwise create it
-        public static ObjImporter Instance
-        {
-            get { return _instance ?? (_instance = new ObjImporter()); }
-        }
-        #endregion
-
-        private const int MIN_POW_10 = -16;
-        private const int MAX_POW_10 = 16;
-        private const int NUM_POWS_10 = MAX_POW_10 - MIN_POW_10 + 1;
-        private static readonly float[] pow10 = GenerateLookupTable();
-
-        // Use this for initialization
-        public Mesh ImportContent(string content)
-        {
-            return LoadMeshData(content);
-        }
-
         private class MeshCollector
         {
             public readonly List<int> triangles = new List<int>();
@@ -52,8 +33,12 @@ namespace Assets.Scripts
             public readonly List<Vector3Int> faceData = new List<Vector3Int>();
             public readonly List<int> intArray = new List<int>();
 
+            public bool IsEmpty => triangles.Count == 0;
+
             public Mesh ToMesh()
             {
+                if (IsEmpty) throw new Exception("Empty mesh");
+
                 var newVerts = new Vector3[faceData.Count];
                 var newUVs = new Vector2[faceData.Count];
                 var newNormals = new Vector3[faceData.Count];
@@ -86,9 +71,34 @@ namespace Assets.Scripts
             }
         }
 
-        private static Mesh LoadMeshData(string text)
+        #endregion
+
+        #region singleton
+
+        // Singleton code
+        // Static can be called from anywhere without having to make an instance
+        private static ObjImporter _instance;
+
+        // If called check if there is an instance, otherwise create it
+        public static ObjImporter Instance
         {
-            var collector = new MeshCollector();
+            get { return _instance ?? (_instance = new ObjImporter()); }
+        }
+        #endregion
+
+        private const int MIN_POW_10 = -16;
+
+        private const int MAX_POW_10 = 16;
+
+        private const int NUM_POWS_10 = MAX_POW_10 - MIN_POW_10 + 1;
+
+        private static readonly float[] pow10 = GenerateLookupTable();
+
+        public Mesh[] ImportContent(string objContent)
+        {
+            var collectors = new List<MeshCollector>();
+            var collector = new MeshCollector(); // not necessary to init, but need to make it safe
+            collectors.Add(collector);
 
             var sb = new StringBuilder();
 
@@ -98,14 +108,14 @@ namespace Assets.Scripts
 
             StringBuilder sbFloat = new StringBuilder();
 
-            for (int i = 0; i < text.Length; i++)
+            for (int i = 0; i < objContent.Length; i++)
             {
-                if (text[i] == '\n')
+                if (objContent[i] == '\n')
                 {
                     sb.Remove(0, sb.Length);
 
                     // Start +1 for whitespace '\n'
-                    sb.Append(text, start + 1, i - start);
+                    sb.Append(objContent, start + 1, i - start);
                     start = i;
 
                     var cmd = sb[0];
@@ -169,16 +179,17 @@ namespace Assets.Scripts
                             j++;
                         }
                     }
-                    else if (cmd == 'g')
+                    else if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
                     {
-                        //ProcessDeepLinkManager.Instance.Log(sb.ToString());
+                        collector = new MeshCollector();
+                        collectors.Add(collector);
                     }
                 }
             }
 
-            var mesh = collector.ToMesh();
+            LogMessage($"Collected {collectors.Count} meshes");
 
-            return mesh;
+            return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh()).ToArray();
         }
 
         private static float GetFloat(StringBuilder sb, ref int start, ref StringBuilder sbFloat)
@@ -252,5 +263,7 @@ namespace Assets.Scripts
             }
             return result;
         }
+
+        private static void LogMessage(string message) => ProcessDeepLinkManager.Instance.Log(message);
     }
 }
