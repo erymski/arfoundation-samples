@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Assets.Scripts;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
@@ -36,6 +37,8 @@ public class PlaceOverPlane : MonoBehaviour
         {
             while (! _bounds.HasValue)
             {
+                LogMessage("Calculating bounds");
+
                 var meshFilters = Template.GetComponentsInChildren<MeshFilter>();
                 if (meshFilters == null)
                 {
@@ -46,12 +49,25 @@ public class PlaceOverPlane : MonoBehaviour
                 LogMessage($"***** Meshes count: {meshFilters.Length}");
                 if (meshFilters.Length == 0) break;
 
-                var firstBound = meshFilters[0].mesh.bounds;
+                var mesh = meshFilters[0].mesh;
+
+                var firstBound = mesh.bounds;
+                LogMessage($"First bound: {firstBound}");
                 var bounds = new Bounds(firstBound.center, firstBound.size);
-                for (int i = 1; i < meshFilters.Length; i++)
+
+                for (int i = 0; i < mesh.subMeshCount; i++)
                 {
-                    bounds.Encapsulate(meshFilters[i].mesh.bounds);
+                    var sub = mesh.GetSubMesh(i);
+//                    LogMessage($"sub bound: {sub.bounds}");
+
+                    bounds.Encapsulate(sub.bounds);
                 }
+
+                //for (int i = 1; i < meshFilters.Length; i++)
+                //{
+                //    LogMessage($"{i} bound: {meshFilters[i].mesh.bounds}");
+                //    bounds.Encapsulate(meshFilters[i].mesh.bounds);
+                //}
 
                 LogMessage($"**** BOUNDS: {bounds}");
                 _bounds = bounds;
@@ -74,24 +90,46 @@ public class PlaceOverPlane : MonoBehaviour
         {
             if (_customTemplate) return _customTemplate;
 
-            var manager = ProcessDeepLinkManager.Instance;
-            var meshes = manager.LoadedMeshes;
-            if (meshes == null) return m_PlacedPrefab;
-
-            manager.Log("Creating a new template");
-
-            _customTemplate = new GameObject("LD2020 template");
-
-            for (int i = 0; i < meshes.Length; i++)
+            try
             {
+                var manager = ProcessDeepLinkManager.Instance;
+                var meshes = manager.LoadedMeshes;
+                if (meshes == null)
+                {
+                    LogMessage("Use default prefab");
+                    return m_PlacedPrefab;
+                }
+
+                manager.Log($"Creating a new template for {meshes.Length} meshes");
+
+                _customTemplate = new GameObject("LD2020 template");
+
+                CombineInstance[] combined = new CombineInstance[meshes.Length];
+
+                for (int i = 0; i < meshes.Length; i++)
+                {
+                    combined[i].mesh = meshes[i];
+                    LogMessage($"New mesh with {meshes[i].bounds}");
+                    //var meshFilter = _customTemplate.AddComponent<MeshFilter>();
+                    //LogMessage($"Filter exists is {meshFilter != null}");
+                    //meshFilter.sharedMesh = meshes[i];
+                }
                 var meshFilter = _customTemplate.AddComponent<MeshFilter>();
-                meshFilter.sharedMesh = meshes[i];
+                meshFilter.mesh = new Mesh();
+                meshFilter.mesh.CombineMeshes(combined, false);
+                meshFilter.mesh.RecalculateBounds();
+
+                LogMessage("Create new mesh renderer");
+                var meshRenderer = _customTemplate.AddComponent<MeshRenderer>();
+                meshRenderer.material = new Material(Shader.Find("Standard"));
+
+                _bounds = null;
             }
-
-            var meshRenderer = _customTemplate.AddComponent<MeshRenderer>();
-            meshRenderer.material = new Material(Shader.Find("Standard"));
-
-            _bounds = null;
+            catch (Exception e)
+            {
+                LogMessage($"Failed with {e}");
+                throw;
+            }
 
             return _customTemplate;
         }

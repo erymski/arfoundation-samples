@@ -64,7 +64,7 @@ namespace Assets.Scripts
         {
             var stopwatch = Stopwatch.StartNew();
 
-            Log($"Loading text from {url}");
+            Log($"Loading data from {url}");
             var request = UnityWebRequest.Get(url);
             yield return request.SendWebRequest();
 
@@ -87,7 +87,7 @@ namespace Assets.Scripts
             Log("Link activated: " + url);
 
             // Update DeepLink Manager global variable, so URL can be accessed from anywhere.
-            deeplinkURL = url.Replace("ld2020", "http");
+            deeplinkURL = url.Replace("ld2020", "https");
 
             StartCoroutine(LoadDataFromServer(deeplinkURL, content =>
             {

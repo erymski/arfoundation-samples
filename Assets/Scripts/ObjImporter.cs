@@ -27,15 +27,11 @@ namespace Assets.Scripts
         private class MeshCollector
         {
             public readonly List<int> triangles = new List<int>();
-            public readonly List<Vector3> vertices = new List<Vector3>();
-            public readonly List<Vector2> uv = new List<Vector2>();
-            public readonly List<Vector3> normals = new List<Vector3>();
             public readonly List<Vector3Int> faceData = new List<Vector3Int>();
-            public readonly List<int> intArray = new List<int>();
 
             public bool IsEmpty => triangles.Count == 0;
 
-            public Mesh ToMesh()
+            public Mesh ToMesh(List<Vector3> vertices, List<Vector2> uv, List<Vector3> normals)
             {
                 if (IsEmpty) throw new Exception("Empty mesh");
 
@@ -65,8 +61,11 @@ namespace Assets.Scripts
                 };
 
 
-                mesh.RecalculateBounds();
                 mesh.Optimize();
+                mesh.RecalculateBounds();
+
+                LogMessage($"Calculated {mesh.bounds}");
+
                 return mesh;
             }
         }
@@ -83,9 +82,14 @@ namespace Assets.Scripts
 
         public static Mesh[] Process(string objContent)
         {
+            List<Vector3> vertices = new List<Vector3>();
+            List<Vector2> uv = new List<Vector2>();
+            List<Vector3> normals = new List<Vector3>();
+            List<int> intArray = new List<int>();
+
             var collectors = new List<MeshCollector>();
-            var collector = new MeshCollector(); // not necessary to init, but need to make it safe
-            collectors.Add(collector);
+            MeshCollector collector = null; //new MeshCollector(); // not necessary to init, but need to make it safe
+//            collectors.Add(collector);
 
             var sb = new StringBuilder();
 
@@ -120,21 +124,21 @@ namespace Assets.Scripts
                     {
                         int splitStart = 2;
 
-                        collector.vertices.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
+                        vertices.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
                             GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
                     }
                     else if (cmd == 'v' && sb[1] == 't' && sb[2] == ' ') // UV
                     {
                         int splitStart = 3;
 
-                        collector.uv.Add(new Vector2(GetFloat(sb, ref splitStart, ref sbFloat),
+                        uv.Add(new Vector2(GetFloat(sb, ref splitStart, ref sbFloat),
                             GetFloat(sb, ref splitStart, ref sbFloat)));
                     }
                     else if (cmd == 'v' && sb[1] == 'n' && sb[2] == ' ') // Normals
                     {
                         int splitStart = 3;
 
-                        collector.normals.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
+                        normals.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
                             GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
                     }
                     else if (cmd == 'f' && sb[1] == ' ')
@@ -142,7 +146,7 @@ namespace Assets.Scripts
                         int splitStart = 2;
 
                         int j = 1;
-                        collector.intArray.Clear();
+                        intArray.Clear();
                         int info = 0;
                         // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
                         while (splitStart < sb.Length && char.IsDigit(sb[splitStart]))
@@ -151,7 +155,7 @@ namespace Assets.Scripts
                                 GetInt(sb, ref splitStart, ref sbFloat), GetInt(sb, ref splitStart, ref sbFloat)));
                             j++;
 
-                            collector.intArray.Add(faceDataCount);
+                            intArray.Add(faceDataCount);
                             faceDataCount++;
                         }
 
@@ -159,9 +163,9 @@ namespace Assets.Scripts
                         j = 1;
                         while (j + 2 < info) //Create triangles out of the face data.  There will generally be more than 1 triangle per face.
                         {
-                            collector.triangles.Add(collector.intArray[0]);
-                            collector.triangles.Add(collector.intArray[j]);
-                            collector.triangles.Add(collector.intArray[j + 1]);
+                            collector.triangles.Add(intArray[0]);
+                            collector.triangles.Add(intArray[j]);
+                            collector.triangles.Add(intArray[j + 1]);
 
                             j++;
                         }
@@ -170,13 +174,14 @@ namespace Assets.Scripts
                     {
                         collector = new MeshCollector();
                         collectors.Add(collector);
+                        faceDataCount = 0;
                     }
                 }
             }
 
             LogMessage($"Collected {collectors.Count} meshes");
 
-            return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh()).ToArray();
+            return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh(vertices, uv, normals)).ToArray();
         }
 
         private static float GetFloat(StringBuilder sb, ref int start, ref StringBuilder sbFloat)
