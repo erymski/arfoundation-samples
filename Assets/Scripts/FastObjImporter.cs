@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
-    public sealed class ObjImporter
+    public sealed class FastObjImporter
     {
-        #region Inner types
-
         private sealed class Vector3Int
         {
             public int x { get; }
@@ -24,89 +20,91 @@ namespace Assets.Scripts
             }
         }
 
-        private class MeshCollector
+        #region singleton
+        // Singleton code
+        // Static can be called from anywhere without having to make an instance
+        private static FastObjImporter _instance;
+
+        // If called check if there is an instance, otherwise create it
+        public static FastObjImporter Instance
         {
-            public readonly List<int> triangles = new List<int>();
-            public readonly List<Vector3Int> faceData = new List<Vector3Int>();
-
-            public bool IsEmpty => triangles.Count == 0;
-
-            public Mesh ToMesh(List<Vector3> vertices, List<Vector2> uv, List<Vector3> normals)
-            {
-                if (IsEmpty) throw new Exception("Empty mesh");
-
-                var newVerts = new Vector3[faceData.Count];
-                var newUVs = new Vector2[faceData.Count];
-                var newNormals = new Vector3[faceData.Count];
-
-                /* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
-                 * for the appropriate Unity mesh array.
-                 */
-                for (int i = 0; i < faceData.Count; i++)
-                {
-                    newVerts[i] = vertices[faceData[i].x - 1];
-                    if (faceData[i].y >= 1)
-                        newUVs[i] = uv[faceData[i].y - 1];
-
-                    if (faceData[i].z >= 1)
-                        newNormals[i] = normals[faceData[i].z - 1];
-                }
-
-                var mesh = new Mesh
-                {
-                    vertices = newVerts,
-                    uv = newUVs,
-                    normals = newNormals,
-                    triangles = triangles.ToArray()
-                };
-
-
-                mesh.Optimize();
-                mesh.RecalculateBounds();
-
-//                LogMessage($"Calculated {mesh.bounds}");
-
-                return mesh;
-            }
+            get { return _instance ?? (_instance = new FastObjImporter()); }
         }
-
         #endregion
 
+        private List<int> triangles;
+        private List<Vector3> vertices;
+        private List<Vector2> uv;
+        private List<Vector3> normals;
+        private List<Vector3Int> faceData;
+        private List<int> intArray;
+
         private const int MIN_POW_10 = -16;
-
         private const int MAX_POW_10 = 16;
-
         private const int NUM_POWS_10 = MAX_POW_10 - MIN_POW_10 + 1;
-
         private static readonly float[] pow10 = GenerateLookupTable();
 
-        public static Mesh[] Process(string objContent)
+        // Use this for initialization
+        public Mesh ImportContent(string content)
         {
-            List<Vector3> vertices = new List<Vector3>();
-            List<Vector2> uv = new List<Vector2>();
-            List<Vector3> normals = new List<Vector3>();
-            List<int> intArray = new List<int>();
+            triangles = new List<int>();
+            vertices = new List<Vector3>();
+            uv = new List<Vector2>();
+            normals = new List<Vector3>();
+            faceData = new List<Vector3Int>();
+            intArray = new List<int>();
 
-            var collectors = new List<MeshCollector>();
-            MeshCollector collector = null; //new MeshCollector(); // not necessary to init, but need to make it safe
-//            collectors.Add(collector);
+            LoadMeshData(content);
 
-            var sb = new StringBuilder();
+            Vector3[] newVerts = new Vector3[faceData.Count];
+            Vector2[] newUVs = new Vector2[faceData.Count];
+            Vector3[] newNormals = new Vector3[faceData.Count];
 
+            /* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
+                 * for the appropriate Unity mesh array.
+                 */
+            for (int i = 0; i < faceData.Count; i++)
+            {
+                newVerts[i] = vertices[faceData[i].x - 1];
+                if (faceData[i].y >= 1)
+                    newUVs[i] = uv[faceData[i].y - 1];
+
+                if (faceData[i].z >= 1)
+                    newNormals[i] = normals[faceData[i].z - 1];
+            }
+
+            var mesh = new Mesh
+            {
+                vertices = newVerts,
+                uv = newUVs,
+                normals = newNormals,
+                triangles = triangles.ToArray()
+            };
+
+
+            mesh.RecalculateBounds();
+            mesh.Optimize();
+
+            return mesh;
+        }
+
+        private void LoadMeshData(string text)
+        {
+            StringBuilder sb = new StringBuilder();
             int start = 0;
             string objectName = null;
             int faceDataCount = 0;
 
             StringBuilder sbFloat = new StringBuilder();
 
-            for (int i = 0; i < objContent.Length; i++)
+            for (int i = 0; i < text.Length; i++)
             {
-                if (objContent[i] == '\n')
+                if (text[i] == '\n')
                 {
                     sb.Remove(0, sb.Length);
 
                     // Start +1 for whitespace '\n'
-                    sb.Append(objContent, start + 1, i - start);
+                    sb.Append(text, start + 1, i - start);
                     start = i;
 
                     var cmd = sb[0];
@@ -151,7 +149,7 @@ namespace Assets.Scripts
                         // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
                         while (splitStart < sb.Length && char.IsDigit(sb[splitStart]))
                         {
-                            collector.faceData.Add(new Vector3Int(GetInt(sb, ref splitStart, ref sbFloat),
+                            faceData.Add(new Vector3Int(GetInt(sb, ref splitStart, ref sbFloat),
                                 GetInt(sb, ref splitStart, ref sbFloat), GetInt(sb, ref splitStart, ref sbFloat)));
                             j++;
 
@@ -163,28 +161,22 @@ namespace Assets.Scripts
                         j = 1;
                         while (j + 2 < info) //Create triangles out of the face data.  There will generally be more than 1 triangle per face.
                         {
-                            collector.triangles.Add(intArray[0]);
-                            collector.triangles.Add(intArray[j]);
-                            collector.triangles.Add(intArray[j + 1]);
+                            triangles.Add(intArray[0]);
+                            triangles.Add(intArray[j]);
+                            triangles.Add(intArray[j + 1]);
 
                             j++;
                         }
                     }
-                    else if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
+                    else if (cmd == 'g')
                     {
-                        collector = new MeshCollector();
-                        collectors.Add(collector);
-                        faceDataCount = 0;
+                        //ProcessDeepLinkManager.Instance.Log(sb.ToString());
                     }
                 }
             }
-
-            LogMessage($"Collected {collectors.Count} meshes");
-
-            return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh(vertices, uv, normals)).ToArray();
         }
 
-        private static float GetFloat(StringBuilder sb, ref int start, ref StringBuilder sbFloat)
+        private float GetFloat(StringBuilder sb, ref int start, ref StringBuilder sbFloat)
         {
             sbFloat.Remove(0, sbFloat.Length);
             while (start < sb.Length &&
@@ -198,10 +190,11 @@ namespace Assets.Scripts
             return ParseFloat(sbFloat);
         }
 
-        private static int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
+        private int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
         {
             sbInt.Remove(0, sbInt.Length);
-            while (start < sb.Length && char.IsDigit(sb[start]))
+            while (start < sb.Length &&
+                   (char.IsDigit(sb[start])))
             {
                 sbInt.Append(sb[start]);
                 start++;
@@ -216,11 +209,12 @@ namespace Assets.Scripts
         {
             var result = new float[(-MIN_POW_10 + MAX_POW_10) * 10];
             for (int i = 0; i < result.Length; i++)
-                result[i] = i * Mathf.Pow(10, i % NUM_POWS_10 + MIN_POW_10) / NUM_POWS_10;
+                result[i] = (float)((i / NUM_POWS_10) *
+                                    Mathf.Pow(10, i % NUM_POWS_10 + MIN_POW_10));
             return result;
         }
 
-        private static float ParseFloat(StringBuilder value)
+        private float ParseFloat(StringBuilder value)
         {
             float result = 0;
             bool negate = false;
@@ -243,7 +237,7 @@ namespace Assets.Scripts
             return result;
         }
 
-        private static int IntParseFast(StringBuilder value)
+        private int IntParseFast(StringBuilder value)
         {
             // An optimized int parse method.
             int result = 0;
@@ -253,7 +247,5 @@ namespace Assets.Scripts
             }
             return result;
         }
-
-        private static void LogMessage(string message) => ProcessDeepLinkManager.Instance.Log(message);
     }
 }

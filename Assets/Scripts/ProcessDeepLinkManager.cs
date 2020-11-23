@@ -110,7 +110,12 @@ namespace Assets.Scripts
 
                             using (var reader = new StreamReader(entry.Open()))
                             {
+#if true
+                                var mesh = FastObjImporter.Instance.ImportContent(reader.ReadToEnd());
+                                LoadedMeshes = new[] {mesh};
+#else
                                 LoadedMeshes = ObjImporter.Process(reader.ReadToEnd());
+#endif
                             }
                         }
 

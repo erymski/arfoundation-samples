@@ -58,7 +58,7 @@ public class PlaceOverPlane : MonoBehaviour
                 for (int i = 0; i < mesh.subMeshCount; i++)
                 {
                     var sub = mesh.GetSubMesh(i);
-//                    LogMessage($"sub bound: {sub.bounds}");
+                    LogMessage($"sub bound: {sub.bounds}");
 
                     bounds.Encapsulate(sub.bounds);
                 }
@@ -103,21 +103,29 @@ public class PlaceOverPlane : MonoBehaviour
                 manager.Log($"Creating a new template for {meshes.Length} meshes");
 
                 _customTemplate = new GameObject("LD2020 template");
+                var meshFilter = _customTemplate.AddComponent<MeshFilter>();
 
+#if false
                 CombineInstance[] combined = new CombineInstance[meshes.Length];
 
                 for (int i = 0; i < meshes.Length; i++)
                 {
                     combined[i].mesh = meshes[i];
-                    LogMessage($"New mesh with {meshes[i].bounds}");
+                    LogMessage($"New sub mesh with {meshes[i].bounds}");
+                    break;
                     //var meshFilter = _customTemplate.AddComponent<MeshFilter>();
                     //LogMessage($"Filter exists is {meshFilter != null}");
                     //meshFilter.sharedMesh = meshes[i];
                 }
-                var meshFilter = _customTemplate.AddComponent<MeshFilter>();
                 meshFilter.mesh = new Mesh();
                 meshFilter.mesh.CombineMeshes(combined, false);
                 meshFilter.mesh.RecalculateBounds();
+
+#else
+                meshFilter.mesh = meshes[0];
+#endif
+                LogMessage($"New mesh with {meshFilter.mesh.bounds}");
+
 
                 LogMessage("Create new mesh renderer");
                 var meshRenderer = _customTemplate.AddComponent<MeshRenderer>();
