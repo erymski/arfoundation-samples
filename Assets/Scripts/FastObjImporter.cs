@@ -37,7 +37,6 @@ namespace Assets.Scripts
         private List<Vector2> uv;
         private List<Vector3> normals;
         private List<Vector3Int> faceData;
-        private List<int> intArray;
 
         private const int MIN_POW_10 = -16;
         private const int MAX_POW_10 = 16;
@@ -52,7 +51,6 @@ namespace Assets.Scripts
             uv = new List<Vector2>();
             normals = new List<Vector3>();
             faceData = new List<Vector3Int>();
-            intArray = new List<int>();
 
             LoadMeshData(content);
 
@@ -144,7 +142,8 @@ namespace Assets.Scripts
                         int splitStart = 2;
 
                         int j = 1;
-                        intArray.Clear();
+                        var intArray = new List<int>();
+
                         int info = 0;
                         // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
                         while (splitStart < sb.Length && char.IsDigit(sb[splitStart]))
@@ -216,6 +215,7 @@ namespace Assets.Scripts
 
         private float ParseFloat(StringBuilder value)
         {
+            return float.Parse(value.ToString());
             float result = 0;
             bool negate = false;
             int len = value.Length;

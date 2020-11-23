@@ -72,14 +72,6 @@ namespace Assets.Scripts
 
         #endregion
 
-        private const int MIN_POW_10 = -16;
-
-        private const int MAX_POW_10 = 16;
-
-        private const int NUM_POWS_10 = MAX_POW_10 - MIN_POW_10 + 1;
-
-        private static readonly float[] pow10 = GenerateLookupTable();
-
         public static Mesh[] Process(string objContent)
         {
             List<Vector3> vertices = new List<Vector3>();
@@ -88,8 +80,7 @@ namespace Assets.Scripts
             List<int> intArray = new List<int>();
 
             var collectors = new List<MeshCollector>();
-            MeshCollector collector = null; //new MeshCollector(); // not necessary to init, but need to make it safe
-//            collectors.Add(collector);
+            MeshCollector collector = null;
 
             var sb = new StringBuilder();
 
@@ -110,7 +101,13 @@ namespace Assets.Scripts
                     start = i;
 
                     var cmd = sb[0];
-                    if (cmd == 'o' && sb[1] == ' ')
+                    if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
+                    {
+                        collector = new MeshCollector();
+                        collectors.Add(collector);
+                        faceDataCount = 0;
+                    }
+                    else if (cmd == 'o' && sb[1] == ' ')
                     {
                         sbFloat.Remove(0, sbFloat.Length);
                         int j = 2;
@@ -170,12 +167,6 @@ namespace Assets.Scripts
                             j++;
                         }
                     }
-                    else if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
-                    {
-                        collector = new MeshCollector();
-                        collectors.Add(collector);
-                        faceDataCount = 0;
-                    }
                 }
             }
 
@@ -195,7 +186,7 @@ namespace Assets.Scripts
             }
             start++;
 
-            return ParseFloat(sbFloat);
+            return float.Parse(sbFloat.ToString());
         }
 
         private static int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
@@ -208,50 +199,7 @@ namespace Assets.Scripts
             }
             start++;
 
-            return IntParseFast(sbInt);
-        }
-
-
-        private static float[] GenerateLookupTable()
-        {
-            var result = new float[(-MIN_POW_10 + MAX_POW_10) * 10];
-            for (int i = 0; i < result.Length; i++)
-                result[i] = i * Mathf.Pow(10, i % NUM_POWS_10 + MIN_POW_10) / NUM_POWS_10;
-            return result;
-        }
-
-        private static float ParseFloat(StringBuilder value)
-        {
-            float result = 0;
-            bool negate = false;
-            int len = value.Length;
-            int decimalIndex = value.Length;
-            for (int i = len - 1; i >= 0; i--)
-                if (value[i] == '.')
-                { decimalIndex = i; break; }
-            int offset = -MIN_POW_10 + decimalIndex;
-            for (int i = 0; i < decimalIndex; i++)
-                if (i != decimalIndex && value[i] != '-')
-                    result += pow10[(value[i] - '0') * NUM_POWS_10 + offset - i - 1];
-                else if (value[i] == '-')
-                    negate = true;
-            for (int i = decimalIndex + 1; i < len; i++)
-                if (i != decimalIndex)
-                    result += pow10[(value[i] - '0') * NUM_POWS_10 + offset - i];
-            if (negate)
-                result = -result;
-            return result;
-        }
-
-        private static int IntParseFast(StringBuilder value)
-        {
-            // An optimized int parse method.
-            int result = 0;
-            for (int i = 0; i < value.Length; i++)
-            {
-                result = 10 * result + (value[i] - 48);
-            }
-            return result;
+            return int.Parse(sbInt.ToString());
         }
 
         private static void LogMessage(string message) => ProcessDeepLinkManager.Instance.Log(message);
