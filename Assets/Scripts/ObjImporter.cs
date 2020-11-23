@@ -76,15 +76,13 @@ namespace Assets.Scripts
 
         public static Mesh[] Process(StreamReader reader)
         {
-            List<Vector3> vertices = new List<Vector3>();
-            List<Vector2> uv = new List<Vector2>();
-            List<Vector3> normals = new List<Vector3>();
-            List<int> intArray = new List<int>();
+            var vertices = new List<Vector3>();
+            var uv = new List<Vector2>();
+            var normals = new List<Vector3>();
+            var intArray = new List<int>();
 
             var collectors = new List<MeshCollector>();
             MeshCollector collector = null;
-
-            var sb = new StringBuilder();
 
             string objectName = null;
             int faceDataCount = 0;
@@ -94,7 +92,8 @@ namespace Assets.Scripts
             string line;
             while ((line = reader.ReadLine()) != null)
             {
-                if (line.Length == 0) continue;
+                var lineLength = line.Length;
+                if (lineLength == 0) continue;
 
                 var cmd = line[0];
                 if (cmd == '#') continue;
@@ -107,42 +106,38 @@ namespace Assets.Scripts
                     continue;
                 }
 
-                sb.Length = 0;
-                sb.Append(line);
-
-                if (cmd == 'o' && sb[1] == ' ')
+                if (cmd == 'o' && line[1] == ' ')
                 {
-                    sbFloat.Remove(0, sbFloat.Length);
                     int j = 2;
-                    while (j < sb.Length)
+                    while (j < lineLength)
                     {
-                        objectName += sb[j];
+                        objectName += line[j];
                         j++;
                     }
                 }
-                else if (cmd == 'v' && sb[1] == ' ') // Vertices
+                else if (cmd == 'v' && line[1] == ' ') // Vertices
                 {
                     int splitStart = 2;
 
-                    vertices.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
-                                                GetFloat(sb, ref splitStart, ref sbFloat),
-                                                GetFloat(sb, ref splitStart, ref sbFloat)));
+                    vertices.Add(new Vector3(GetFloat(line, ref splitStart, ref sbFloat),
+                                                GetFloat(line, ref splitStart, ref sbFloat),
+                                                GetFloat(line, ref splitStart, ref sbFloat)));
                 }
-                else if (cmd == 'v' && sb[1] == 't' && sb[2] == ' ') // UV
+                else if (cmd == 'v' && line[1] == 't' && line[2] == ' ') // UV
                 {
                     int splitStart = 3;
 
-                    uv.Add(new Vector2(GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
+                    uv.Add(new Vector2(GetFloat(line, ref splitStart, ref sbFloat), GetFloat(line, ref splitStart, ref sbFloat)));
                 }
-                else if (cmd == 'v' && sb[1] == 'n' && sb[2] == ' ') // Normals
+                else if (cmd == 'v' && line[1] == 'n' && line[2] == ' ') // Normals
                 {
                     int splitStart = 3;
 
-                    normals.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
-                                            GetFloat(sb, ref splitStart, ref sbFloat),
-                                            GetFloat(sb, ref splitStart, ref sbFloat)));
+                    normals.Add(new Vector3(GetFloat(line, ref splitStart, ref sbFloat),
+                                            GetFloat(line, ref splitStart, ref sbFloat),
+                                            GetFloat(line, ref splitStart, ref sbFloat)));
                 }
-                else if (cmd == 'f' && sb[1] == ' ')
+                else if (cmd == 'f' && line[1] == ' ')
                 {
                     int splitStart = 2;
 
@@ -150,11 +145,11 @@ namespace Assets.Scripts
                     intArray.Clear();
                     int info = 0;
                     // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
-                    while (splitStart < sb.Length && char.IsDigit(sb[splitStart]))
+                    while (splitStart < lineLength && char.IsDigit(line[splitStart]))
                     {
-                        collector.faceData.Add(new Vector3Int(GetInt(sb, ref splitStart, ref sbFloat),
-                                                                GetInt(sb, ref splitStart, ref sbFloat),
-                                                                GetInt(sb, ref splitStart, ref sbFloat)));
+                        collector.faceData.Add(new Vector3Int(GetInt(line, ref splitStart, ref sbFloat),
+                                                                GetInt(line, ref splitStart, ref sbFloat),
+                                                                GetInt(line, ref splitStart, ref sbFloat)));
                         j++;
 
                         intArray.Add(faceDataCount);
@@ -163,8 +158,7 @@ namespace Assets.Scripts
 
                     info += j;
                     j = 1;
-                    while (j + 2 < info
-                    ) //Create triangles out of the face data.  There will generally be more than 1 triangle per face.
+                    while (j + 2 < info) //Create triangles out of the face data.  There will generally be more than 1 triangle per face.
                     {
                         collector.triangles.Add(intArray[0]);
                         collector.triangles.Add(intArray[j]);
@@ -180,9 +174,9 @@ namespace Assets.Scripts
             return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh(vertices, uv, normals)).ToArray();
         }
 
-        private static float GetFloat(StringBuilder sb, ref int start, ref StringBuilder sbFloat)
+        private static float GetFloat(string sb, ref int start, ref StringBuilder sbFloat)
         {
-            sbFloat.Remove(0, sbFloat.Length);
+            sbFloat.Length = 0;
             while (start < sb.Length &&
                    (char.IsDigit(sb[start]) || sb[start] == '-' || sb[start] == '.'))
             {
@@ -194,9 +188,9 @@ namespace Assets.Scripts
             return float.Parse(sbFloat.ToString(), CultureInfo.InvariantCulture);
         }
 
-        private static int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
+        private static int GetInt(string sb, ref int start, ref StringBuilder sbInt)
         {
-            sbInt.Remove(0, sbInt.Length);
+            sbInt.Length = 0;
             while (start < sb.Length && char.IsDigit(sb[start]))
             {
                 sbInt.Append(sb[start]);
