@@ -179,7 +179,7 @@ namespace Assets.Scripts
             return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh(vertices, uv, normals)).ToArray();
         }
 
-        private static float GetFloat(string line, ref int start, ref StringBuilder sbFloat)
+        private static float GetFloat(string line, ref int start, ref StringBuilder sbFloat) // TODO: speed up
         {
             sbFloat.Length = 0;
             while (start < line.Length &&

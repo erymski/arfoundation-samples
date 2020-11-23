@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Assets.Scripts
 {
@@ -73,6 +74,7 @@ namespace Assets.Scripts
 
             var mesh = new Mesh
             {
+                indexFormat = IndexFormat.UInt32,
                 vertices = newVerts,
                 uv = newUVs,
                 normals = newNormals,

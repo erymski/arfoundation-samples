@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Assets.Scripts;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 
@@ -46,10 +47,13 @@ public class PlaceOverPlane : MonoBehaviour
                     break;
                 }
 
+                var mf = _customTemplate.AddComponent<MeshFilter>();
+                LogMessage($"-- {mf?.sharedMesh?.bounds}");
+
                 LogMessage($"***** Meshes count: {meshFilters.Length}");
                 if (meshFilters.Length == 0) break;
 
-                var mesh = meshFilters[0].mesh;
+                var mesh = meshFilters[0].sharedMesh;
 
                 var firstBound = mesh.bounds;
                 LogMessage($"First bound: {firstBound}");
@@ -111,17 +115,20 @@ public class PlaceOverPlane : MonoBehaviour
                 for (int i = 0; i < meshes.Length; i++)
                 {
                     combined[i].mesh = meshes[i];
-                    LogMessage($"New sub mesh with {meshes[i].bounds}");
-                    break;
+                    combined[i].subMeshIndex = 0;
+                    //combined[i].subMeshIndex = i;
+//                    LogMessage($"New sub mesh with {meshes[i].bounds}");
+                    //break;
                     //var meshFilter = _customTemplate.AddComponent<MeshFilter>();
                     //LogMessage($"Filter exists is {meshFilter != null}");
                     //meshFilter.sharedMesh = meshes[i];
                 }
-                meshFilter.mesh = new Mesh();
-                meshFilter.mesh.CombineMeshes(combined, false);
-                meshFilter.mesh.RecalculateBounds();
 
-#else
+                meshFilter.sharedMesh = new Mesh { subMeshCount = 1, indexFormat = IndexFormat.UInt32 };
+                meshFilter.sharedMesh.CombineMeshes(combined, mergeSubMeshes: false, useMatrices: false);
+                meshFilter.sharedMesh.RecalculateBounds();
+
+#else // TECHDEBT
                 meshFilter.mesh = meshes[0];
 #endif
                 LogMessage($"New mesh with {meshFilter.mesh.bounds}");
@@ -186,7 +193,7 @@ public class PlaceOverPlane : MonoBehaviour
 
             // origin is at the center, so move position in Y+ direction to place object over the plane
             var hitPosition = hitPose.position;
-            hitPosition.y += (Bounds.size.y / 2);
+//            hitPosition.y += (Bounds.size.y / 2);
 
             if (SpawnedObject == null)
             {

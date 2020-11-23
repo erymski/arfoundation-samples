@@ -110,7 +110,7 @@ namespace Assets.Scripts
 
                             using (var reader = new StreamReader(entry.Open()))
                             {
-#if false
+#if true // TECHDEBT
                                 var mesh = FastObjImporter.Instance.ImportContent(reader.ReadToEnd());
                                 LoadedMeshes = new[] {mesh};
 #else
