@@ -154,9 +154,7 @@ namespace Assets.Scripts
                     // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
                     while (pos < lineLength && char.IsDigit(line[pos]))
                     {
-                        collector.faceData.Add(new Vector3Int(GetInt(line, ref pos, ref buffer),
-                                                                GetInt(line, ref pos, ref buffer),
-                                                                GetInt(line, ref pos, ref buffer)));
+                        collector.faceData.Add(new Vector3Int(GetInt(line, ref pos), GetInt(line, ref pos), GetInt(line, ref pos)));
                         j++;
 
                         intArray.Add(faceDataCount);
@@ -181,13 +179,13 @@ namespace Assets.Scripts
             return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh(vertices, uv, normals)).ToArray();
         }
 
-        private static float GetFloat(string sb, ref int start, ref StringBuilder sbFloat)
+        private static float GetFloat(string line, ref int start, ref StringBuilder sbFloat)
         {
             sbFloat.Length = 0;
-            while (start < sb.Length &&
-                   (char.IsDigit(sb[start]) || sb[start] == '-' || sb[start] == '.'))
+            while (start < line.Length &&
+                   (char.IsDigit(line[start]) || line[start] == '-' || line[start] == '.'))
             {
-                sbFloat.Append(sb[start]);
+                sbFloat.Append(line[start]);
                 start++;
             }
             start++;
@@ -195,17 +193,18 @@ namespace Assets.Scripts
             return float.Parse(sbFloat.ToString(), CultureInfo.InvariantCulture);
         }
 
-        private static int GetInt(string sb, ref int start, ref StringBuilder sbInt)
+        private static int GetInt(string line, ref int pos)
         {
-            sbInt.Length = 0;
-            while (start < sb.Length && char.IsDigit(sb[start]))
+            int result = 0;
+            while (pos < line.Length && char.IsDigit(line[pos]))
             {
-                sbInt.Append(sb[start]);
-                start++;
+                result = 10 * result + (line[pos] - 48);
+                pos++;
             }
-            start++;
 
-            return int.Parse(sbInt.ToString(), CultureInfo.InvariantCulture);
+            pos++;
+
+            return result;
         }
 
         private static void LogMessage(string message) => ProcessDeepLinkManager.Instance.Log(message);
