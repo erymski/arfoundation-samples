@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -72,7 +74,7 @@ namespace Assets.Scripts
 
         #endregion
 
-        public static Mesh[] Process(string objContent)
+        public static Mesh[] Process(StreamReader reader)
         {
             List<Vector3> vertices = new List<Vector3>();
             List<Vector2> uv = new List<Vector2>();
@@ -84,88 +86,91 @@ namespace Assets.Scripts
 
             var sb = new StringBuilder();
 
-            int start = 0;
             string objectName = null;
             int faceDataCount = 0;
 
             StringBuilder sbFloat = new StringBuilder();
 
-            for (int i = 0; i < objContent.Length; i++)
+            string line;
+            while ((line = reader.ReadLine()) != null)
             {
-                if (objContent[i] == '\n')
+                if (line.Length == 0) continue;
+
+                var cmd = line[0];
+                if (cmd == '#') continue;
+
+                if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
                 {
-                    sb.Remove(0, sb.Length);
+                    collector = new MeshCollector();
+                    collectors.Add(collector);
+                    faceDataCount = 0;
+                    continue;
+                }
 
-                    // Start +1 for whitespace '\n'
-                    sb.Append(objContent, start + 1, i - start);
-                    start = i;
+                sb.Length = 0;
+                sb.Append(line);
 
-                    var cmd = sb[0];
-                    if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
+                if (cmd == 'o' && sb[1] == ' ')
+                {
+                    sbFloat.Remove(0, sbFloat.Length);
+                    int j = 2;
+                    while (j < sb.Length)
                     {
-                        collector = new MeshCollector();
-                        collectors.Add(collector);
-                        faceDataCount = 0;
+                        objectName += sb[j];
+                        j++;
                     }
-                    else if (cmd == 'o' && sb[1] == ' ')
+                }
+                else if (cmd == 'v' && sb[1] == ' ') // Vertices
+                {
+                    int splitStart = 2;
+
+                    vertices.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
+                                                GetFloat(sb, ref splitStart, ref sbFloat),
+                                                GetFloat(sb, ref splitStart, ref sbFloat)));
+                }
+                else if (cmd == 'v' && sb[1] == 't' && sb[2] == ' ') // UV
+                {
+                    int splitStart = 3;
+
+                    uv.Add(new Vector2(GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
+                }
+                else if (cmd == 'v' && sb[1] == 'n' && sb[2] == ' ') // Normals
+                {
+                    int splitStart = 3;
+
+                    normals.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
+                                            GetFloat(sb, ref splitStart, ref sbFloat),
+                                            GetFloat(sb, ref splitStart, ref sbFloat)));
+                }
+                else if (cmd == 'f' && sb[1] == ' ')
+                {
+                    int splitStart = 2;
+
+                    int j = 1;
+                    intArray.Clear();
+                    int info = 0;
+                    // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
+                    while (splitStart < sb.Length && char.IsDigit(sb[splitStart]))
                     {
-                        sbFloat.Remove(0, sbFloat.Length);
-                        int j = 2;
-                        while (j < sb.Length)
-                        {
-                            objectName += sb[j];
-                            j++;
-                        }
+                        collector.faceData.Add(new Vector3Int(GetInt(sb, ref splitStart, ref sbFloat),
+                                                                GetInt(sb, ref splitStart, ref sbFloat),
+                                                                GetInt(sb, ref splitStart, ref sbFloat)));
+                        j++;
+
+                        intArray.Add(faceDataCount);
+                        faceDataCount++;
                     }
-                    else if (cmd == 'v' && sb[1] == ' ') // Vertices
+
+                    info += j;
+                    j = 1;
+                    while (j + 2 < info
+                    ) //Create triangles out of the face data.  There will generally be more than 1 triangle per face.
                     {
-                        int splitStart = 2;
+                        collector.triangles.Add(intArray[0]);
+                        collector.triangles.Add(intArray[j]);
+                        collector.triangles.Add(intArray[j + 1]);
 
-                        vertices.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
-                            GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
-                    }
-                    else if (cmd == 'v' && sb[1] == 't' && sb[2] == ' ') // UV
-                    {
-                        int splitStart = 3;
-
-                        uv.Add(new Vector2(GetFloat(sb, ref splitStart, ref sbFloat),
-                            GetFloat(sb, ref splitStart, ref sbFloat)));
-                    }
-                    else if (cmd == 'v' && sb[1] == 'n' && sb[2] == ' ') // Normals
-                    {
-                        int splitStart = 3;
-
-                        normals.Add(new Vector3(GetFloat(sb, ref splitStart, ref sbFloat),
-                            GetFloat(sb, ref splitStart, ref sbFloat), GetFloat(sb, ref splitStart, ref sbFloat)));
-                    }
-                    else if (cmd == 'f' && sb[1] == ' ')
-                    {
-                        int splitStart = 2;
-
-                        int j = 1;
-                        intArray.Clear();
-                        int info = 0;
-                        // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
-                        while (splitStart < sb.Length && char.IsDigit(sb[splitStart]))
-                        {
-                            collector.faceData.Add(new Vector3Int(GetInt(sb, ref splitStart, ref sbFloat),
-                                GetInt(sb, ref splitStart, ref sbFloat), GetInt(sb, ref splitStart, ref sbFloat)));
-                            j++;
-
-                            intArray.Add(faceDataCount);
-                            faceDataCount++;
-                        }
-
-                        info += j;
-                        j = 1;
-                        while (j + 2 < info) //Create triangles out of the face data.  There will generally be more than 1 triangle per face.
-                        {
-                            collector.triangles.Add(intArray[0]);
-                            collector.triangles.Add(intArray[j]);
-                            collector.triangles.Add(intArray[j + 1]);
-
-                            j++;
-                        }
+                        j++;
                     }
                 }
             }
@@ -186,7 +191,7 @@ namespace Assets.Scripts
             }
             start++;
 
-            return float.Parse(sbFloat.ToString());
+            return float.Parse(sbFloat.ToString(), CultureInfo.InvariantCulture);
         }
 
         private static int GetInt(StringBuilder sb, ref int start, ref StringBuilder sbInt)
@@ -199,7 +204,7 @@ namespace Assets.Scripts
             }
             start++;
 
-            return int.Parse(sbInt.ToString());
+            return int.Parse(sbInt.ToString(), CultureInfo.InvariantCulture);
         }
 
         private static void LogMessage(string message) => ProcessDeepLinkManager.Instance.Log(message);

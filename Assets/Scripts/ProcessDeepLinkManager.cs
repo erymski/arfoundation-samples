@@ -114,7 +114,7 @@ namespace Assets.Scripts
                                 var mesh = FastObjImporter.Instance.ImportContent(reader.ReadToEnd());
                                 LoadedMeshes = new[] {mesh};
 #else
-                                LoadedMeshes = ObjImporter.Process(reader.ReadToEnd());
+                                LoadedMeshes = ObjImporter.Process(reader);
 #endif
                             }
                         }
