@@ -28,12 +28,18 @@ namespace Assets.Scripts
 
         private class MeshCollector
         {
+            private readonly string _name;
             public readonly List<int> triangles = new List<int>();
             public readonly List<Vector3Int> faceData = new List<Vector3Int>();
 
+            public MeshCollector(string name)
+            {
+                _name = name;
+            }
+
             public bool IsEmpty => triangles.Count == 0;
 
-            public Mesh ToMesh(List<Vector3> vertices, List<Vector2> uv, List<Vector3> normals)
+            public Mesh ToMesh(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2> uv, IReadOnlyList<Vector3> normals)
             {
                 if (IsEmpty) throw new Exception("Empty mesh");
 
@@ -56,6 +62,7 @@ namespace Assets.Scripts
 
                 var mesh = new Mesh
                 {
+                    name = _name,
                     vertices = newVerts,
                     uv = newUVs,
                     normals = newNormals,
@@ -87,7 +94,7 @@ namespace Assets.Scripts
             string objectName = null;
             int faceDataCount = 0;
 
-            StringBuilder sbFloat = new StringBuilder();
+            var buffer = new StringBuilder();
 
             string line;
             while ((line = reader.ReadLine()) != null)
@@ -100,7 +107,7 @@ namespace Assets.Scripts
 
                 if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
                 {
-                    collector = new MeshCollector();
+                    collector = new MeshCollector(line.Substring(2));
                     collectors.Add(collector);
                     faceDataCount = 0;
                     continue;
@@ -117,39 +124,39 @@ namespace Assets.Scripts
                 }
                 else if (cmd == 'v' && line[1] == ' ') // Vertices
                 {
-                    int splitStart = 2;
+                    int pos = 2;
 
-                    vertices.Add(new Vector3(GetFloat(line, ref splitStart, ref sbFloat),
-                                                GetFloat(line, ref splitStart, ref sbFloat),
-                                                GetFloat(line, ref splitStart, ref sbFloat)));
+                    vertices.Add(new Vector3(GetFloat(line, ref pos, ref buffer),
+                                                GetFloat(line, ref pos, ref buffer),
+                                                GetFloat(line, ref pos, ref buffer)));
                 }
                 else if (cmd == 'v' && line[1] == 't' && line[2] == ' ') // UV
                 {
-                    int splitStart = 3;
+                    int pos = 3;
 
-                    uv.Add(new Vector2(GetFloat(line, ref splitStart, ref sbFloat), GetFloat(line, ref splitStart, ref sbFloat)));
+                    uv.Add(new Vector2(GetFloat(line, ref pos, ref buffer), GetFloat(line, ref pos, ref buffer)));
                 }
                 else if (cmd == 'v' && line[1] == 'n' && line[2] == ' ') // Normals
                 {
-                    int splitStart = 3;
+                    int pos = 3;
 
-                    normals.Add(new Vector3(GetFloat(line, ref splitStart, ref sbFloat),
-                                            GetFloat(line, ref splitStart, ref sbFloat),
-                                            GetFloat(line, ref splitStart, ref sbFloat)));
+                    normals.Add(new Vector3(GetFloat(line, ref pos, ref buffer),
+                                            GetFloat(line, ref pos, ref buffer),
+                                            GetFloat(line, ref pos, ref buffer)));
                 }
                 else if (cmd == 'f' && line[1] == ' ')
                 {
-                    int splitStart = 2;
+                    int pos = 2;
 
                     int j = 1;
                     intArray.Clear();
                     int info = 0;
                     // Add faceData, a face can contain multiple triangles, facedata is stored in following order vert, uv, normal. If uv or normal are / set it to a 0
-                    while (splitStart < lineLength && char.IsDigit(line[splitStart]))
+                    while (pos < lineLength && char.IsDigit(line[pos]))
                     {
-                        collector.faceData.Add(new Vector3Int(GetInt(line, ref splitStart, ref sbFloat),
-                                                                GetInt(line, ref splitStart, ref sbFloat),
-                                                                GetInt(line, ref splitStart, ref sbFloat)));
+                        collector.faceData.Add(new Vector3Int(GetInt(line, ref pos, ref buffer),
+                                                                GetInt(line, ref pos, ref buffer),
+                                                                GetInt(line, ref pos, ref buffer)));
                         j++;
 
                         intArray.Add(faceDataCount);
