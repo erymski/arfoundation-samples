@@ -40,6 +40,8 @@ public class PlaceOverPlane : MonoBehaviour
             {
                 LogMessage("Calculating bounds");
 
+                Template.SetActive(true);
+
                 var meshFilters = Template.GetComponentsInChildren<MeshFilter>();
                 if (meshFilters == null)
                 {
@@ -72,6 +74,8 @@ public class PlaceOverPlane : MonoBehaviour
                 //    LogMessage($"{i} bound: {meshFilters[i].mesh.bounds}");
                 //    bounds.Encapsulate(meshFilters[i].mesh.bounds);
                 //}
+
+                Template.SetActive(false);
 
                 LogMessage($"**** BOUNDS: {bounds}");
                 _bounds = bounds;
@@ -146,6 +150,8 @@ public class PlaceOverPlane : MonoBehaviour
                 throw;
             }
 
+            _customTemplate.SetActive(false);
+
             return _customTemplate;
         }
     }
@@ -187,18 +193,24 @@ public class PlaceOverPlane : MonoBehaviour
         var hits = new List<ARRaycastHit>();
         if (_raycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
         {
+            LogMessage("Touch detected");
+
             // Raycast hits are sorted by distance, so the first one
             // will be the closest hit.
             Pose hitPose = hits[0].pose;
 
             // origin is at the center, so move position in Y+ direction to place object over the plane
             var hitPosition = hitPose.position;
-//            hitPosition.y += (Bounds.size.y / 2);
+            hitPosition.y += (Bounds.size.y / 2);
+            hitPosition -= Bounds.center;
+
 
             if (SpawnedObject == null)
             {
                 LogMessage("Placing new object");
+                Template.SetActive(true);
                 SpawnedObject = Instantiate(Template, hitPosition, hitPose.rotation);
+                Template.SetActive(false);
             }
             else
             {
