@@ -6,6 +6,33 @@ using UnityEngine.Rendering;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 
+/// <summary>
+/// Activate <see cref="GameObject" and deactivate on disposal. />
+/// </summary>
+public class ShortActivation : IDisposable
+{
+    private readonly GameObject _gameObject;
+    private readonly bool _wasActive;
+
+    public ShortActivation(GameObject gameObject)
+    {
+        _gameObject = gameObject;
+        _wasActive = _gameObject.activeSelf;
+        if (!_wasActive)
+        {
+            _gameObject.SetActive(true);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (! _wasActive)
+        {
+            _gameObject.SetActive(false);
+        }
+    }
+}
+
 [RequireComponent(typeof(ARRaycastManager))]
 public class PlaceOverPlane : MonoBehaviour
 {
@@ -40,45 +67,46 @@ public class PlaceOverPlane : MonoBehaviour
             {
                 LogMessage("Calculating bounds");
 
-                Template.SetActive(true);
-
-                var meshFilters = Template.GetComponentsInChildren<MeshFilter>();
-                if (meshFilters == null)
+                var template = Template;
+                using (new ShortActivation(template))
                 {
-                    LogMessage("Cannot detect meshes in the prefab");
-                    break;
+                    var meshFilters = template.GetComponentsInChildren<MeshFilter>();
+                    if (meshFilters == null)
+                    {
+                        LogMessage("Cannot detect meshes in the prefab");
+                        break;
+                    }
+
+                    //var mf = _customTemplate.AddComponent<MeshFilter>();
+                    //LogMessage($"-- {mf?.sharedMesh?.bounds}");
+
+                    LogMessage($"***** Meshes count: {meshFilters.Length}");
+                    if (meshFilters.Length == 0) break;
+
+                    var mesh = meshFilters[0].sharedMesh;
+
+                    var firstBound = mesh.bounds;
+                    LogMessage($"First bound: {firstBound}");
+                    var bounds = new Bounds(firstBound.center, firstBound.size);
+
+                    for (int i = 0; i < mesh.subMeshCount; i++)
+                    {
+                        var sub = mesh.GetSubMesh(i);
+                        LogMessage($"sub bound: {sub.bounds}");
+
+                        bounds.Encapsulate(sub.bounds);
+                    }
+
+                    //for (int i = 1; i < meshFilters.Length; i++)
+                    //{
+                    //    LogMessage($"{i} bound: {meshFilters[i].mesh.bounds}");
+                    //    bounds.Encapsulate(meshFilters[i].mesh.bounds);
+                    //}
+
+                    LogMessage($"**** BOUNDS: {bounds}");
+                    _bounds = bounds;
                 }
 
-                var mf = _customTemplate.AddComponent<MeshFilter>();
-                LogMessage($"-- {mf?.sharedMesh?.bounds}");
-
-                LogMessage($"***** Meshes count: {meshFilters.Length}");
-                if (meshFilters.Length == 0) break;
-
-                var mesh = meshFilters[0].sharedMesh;
-
-                var firstBound = mesh.bounds;
-                LogMessage($"First bound: {firstBound}");
-                var bounds = new Bounds(firstBound.center, firstBound.size);
-
-                for (int i = 0; i < mesh.subMeshCount; i++)
-                {
-                    var sub = mesh.GetSubMesh(i);
-                    LogMessage($"sub bound: {sub.bounds}");
-
-                    bounds.Encapsulate(sub.bounds);
-                }
-
-                //for (int i = 1; i < meshFilters.Length; i++)
-                //{
-                //    LogMessage($"{i} bound: {meshFilters[i].mesh.bounds}");
-                //    bounds.Encapsulate(meshFilters[i].mesh.bounds);
-                //}
-
-                Template.SetActive(false);
-
-                LogMessage($"**** BOUNDS: {bounds}");
-                _bounds = bounds;
                 break;
             }
 
@@ -101,14 +129,14 @@ public class PlaceOverPlane : MonoBehaviour
             try
             {
                 var manager = ProcessDeepLinkManager.Instance;
-                var meshes = manager.LoadedMeshes;
-                if (meshes == null)
+                var meshes = manager?.LoadedMeshes;
+                if (meshes == null || meshes.Length == 0)
                 {
                     LogMessage("Use default prefab");
                     return m_PlacedPrefab;
                 }
 
-                manager.Log($"Creating a new template for {meshes.Length} meshes");
+                LogMessage($"Creating a new template for {meshes.Length} meshes");
 
                 _customTemplate = new GameObject("LD2020 template");
                 var meshFilter = _customTemplate.AddComponent<MeshFilter>();
@@ -190,6 +218,8 @@ public class PlaceOverPlane : MonoBehaviour
         if (!TryGetTouchPosition(out Vector2 touchPosition))
             return;
 
+//        var bounds = Bounds;
+
         var hits = new List<ARRaycastHit>();
         if (_raycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
         {
@@ -204,13 +234,14 @@ public class PlaceOverPlane : MonoBehaviour
             hitPosition.y += (Bounds.size.y / 2);
             hitPosition -= Bounds.center;
 
-
             if (SpawnedObject == null)
             {
                 LogMessage("Placing new object");
-                Template.SetActive(true);
-                SpawnedObject = Instantiate(Template, hitPosition, hitPose.rotation);
-                Template.SetActive(false);
+
+                using (new ShortActivation(Template))
+                {
+                    SpawnedObject = Instantiate(Template, hitPosition, hitPose.rotation);
+                }
             }
             else
             {
@@ -220,5 +251,5 @@ public class PlaceOverPlane : MonoBehaviour
         }
     }
 
-    private static void LogMessage(string message) => ProcessDeepLinkManager.Instance.Log(message);
+    private static void LogMessage(string message) => ProcessDeepLinkManager.Instance?.Log(message);
 }
