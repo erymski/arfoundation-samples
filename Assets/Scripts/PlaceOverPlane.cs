@@ -77,31 +77,19 @@ public class PlaceOverPlane : MonoBehaviour
                         break;
                     }
 
-                    //var mf = _customTemplate.AddComponent<MeshFilter>();
-                    //LogMessage($"-- {mf?.sharedMesh?.bounds}");
-
-                    LogMessage($"***** Meshes count: {meshFilters.Length}");
+                    LogMessage($"***** Meshes count to calc bounds: {meshFilters.Length}");
                     if (meshFilters.Length == 0) break;
 
                     var mesh = meshFilters[0].sharedMesh;
 
                     var firstBound = mesh.bounds;
-                    LogMessage($"First bound: {firstBound}");
+//                    LogMessage($"First bound: {firstBound}");
                     var bounds = new Bounds(firstBound.center, firstBound.size);
-
-                    for (int i = 0; i < mesh.subMeshCount; i++)
+                    for (int i = 1; i < meshFilters.Length; i++)
                     {
-                        var sub = mesh.GetSubMesh(i);
-                        LogMessage($"sub bound: {sub.bounds}");
-
-                        bounds.Encapsulate(sub.bounds);
+//                        LogMessage($"{i} bound: {meshFilters[i].mesh.bounds}");
+                        bounds.Encapsulate(meshFilters[i].mesh.bounds);
                     }
-
-                    //for (int i = 1; i < meshFilters.Length; i++)
-                    //{
-                    //    LogMessage($"{i} bound: {meshFilters[i].mesh.bounds}");
-                    //    bounds.Encapsulate(meshFilters[i].mesh.bounds);
-                    //}
 
                     LogMessage($"**** BOUNDS: {bounds}");
                     _bounds = bounds;
@@ -139,36 +127,19 @@ public class PlaceOverPlane : MonoBehaviour
                 LogMessage($"Creating a new template for {meshes.Length} meshes");
 
                 _customTemplate = new GameObject("LD2020 template");
-                var meshFilter = _customTemplate.AddComponent<MeshFilter>();
-
-#if false
-                CombineInstance[] combined = new CombineInstance[meshes.Length];
 
                 for (int i = 0; i < meshes.Length; i++)
                 {
-                    combined[i].mesh = meshes[i];
-                    combined[i].subMeshIndex = 0;
-                    //combined[i].subMeshIndex = i;
-//                    LogMessage($"New sub mesh with {meshes[i].bounds}");
-                    //break;
-                    //var meshFilter = _customTemplate.AddComponent<MeshFilter>();
-                    //LogMessage($"Filter exists is {meshFilter != null}");
-                    //meshFilter.sharedMesh = meshes[i];
+                    var sub = new GameObject($"Child #{i}");
+
+                    var meshFilter = sub.AddComponent<MeshFilter>();
+                    meshFilter.mesh = meshes[i];
+
+                    var meshRenderer = sub.AddComponent<MeshRenderer>();
+                    meshRenderer.material = new Material(Shader.Find("Standard"));
+
+                    sub.transform.parent = _customTemplate.transform;
                 }
-
-                meshFilter.sharedMesh = new Mesh { subMeshCount = 1, indexFormat = IndexFormat.UInt32 };
-                meshFilter.sharedMesh.CombineMeshes(combined, mergeSubMeshes: false, useMatrices: false);
-                meshFilter.sharedMesh.RecalculateBounds();
-
-#else // TECHDEBT
-                meshFilter.mesh = meshes[0];
-#endif
-                LogMessage($"New mesh with {meshFilter.mesh.bounds}");
-
-
-                LogMessage("Create new mesh renderer");
-                var meshRenderer = _customTemplate.AddComponent<MeshRenderer>();
-                meshRenderer.material = new Material(Shader.Find("Standard"));
 
                 _bounds = null;
             }

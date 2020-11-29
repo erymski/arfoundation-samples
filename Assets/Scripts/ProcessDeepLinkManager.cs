@@ -12,6 +12,8 @@ namespace Assets.Scripts
 {
     public class ProcessDeepLinkManager : MonoBehaviour
     {
+        private const string CustomSchema = "ld2020";
+
         [SerializeField]
         Text m_LogText;
 
@@ -21,7 +23,7 @@ namespace Assets.Scripts
             set { m_LogText = value; }
         }
 
-        public void Log(string message)
+        public void Log(string message) // TODO: move logging to a separate component
         {
             Debug.LogError(message);
 
@@ -87,7 +89,7 @@ namespace Assets.Scripts
             Log("Link activated: " + url);
 
             // Update DeepLink Manager global variable, so URL can be accessed from anywhere.
-            deeplinkURL = url.Replace("ld2020", "https");
+            deeplinkURL = url.Replace(CustomSchema, "https");
 
             StartCoroutine(LoadDataFromServer(deeplinkURL, content =>
             {
@@ -110,7 +112,7 @@ namespace Assets.Scripts
 
                             using (var reader = new StreamReader(entry.Open()))
                             {
-#if true // TECHDEBT
+#if false // TECHDEBT
                                 var mesh = FastObjImporter.Instance.ImportContent(reader.ReadToEnd());
                                 LoadedMeshes = new[] {mesh};
 #else
