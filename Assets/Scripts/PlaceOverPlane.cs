@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
+using Random = System.Random;
 
 /// <summary>
 /// Activate <see cref="GameObject" and deactivate on disposal. />
@@ -117,27 +118,29 @@ public class PlaceOverPlane : MonoBehaviour
             try
             {
                 var manager = ProcessDeepLinkManager.Instance;
-                var meshes = manager?.LoadedMeshes;
-                if (meshes == null || meshes.Length == 0)
+                var assets = manager?.LoadedAssets;
+                if (assets == null || assets.Length == 0)
                 {
                     LogMessage("Use default prefab");
                     return m_PlacedPrefab;
                 }
 
-                LogMessage($"Creating a new template for {meshes.Length} meshes");
+                LogMessage($"Creating a new template for {assets.Length} meshes");
 
                 _customTemplate = new GameObject("LD2020 template");
-
-                for (int i = 0; i < meshes.Length; i++)
+                var shader = Shader.Find("Standard");
+                for (int i = 0; i < assets.Length; i++)
                 {
                     var sub = new GameObject($"Child #{i}");
+                    var asset = assets[i];
 
                     var meshFilter = sub.AddComponent<MeshFilter>();
-                    meshFilter.mesh = meshes[i];
+                    meshFilter.mesh = asset.Mesh;
 
                     var meshRenderer = sub.AddComponent<MeshRenderer>();
-                    meshRenderer.material = new Material(Shader.Find("Standard"));
+                    meshRenderer.material = new Material(shader) { color = asset.Color };
 
+                    // attach to parent
                     sub.transform.parent = _customTemplate.transform;
                 }
 

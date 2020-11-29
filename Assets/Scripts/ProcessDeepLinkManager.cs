@@ -35,7 +35,7 @@ namespace Assets.Scripts
         /// <summary>
         /// Meshes imported from loaded OBJ file.
         /// </summary>
-        public Mesh[] LoadedMeshes { get; private set; }
+        public AssetDescriptor[] LoadedAssets { get; private set; }
 
         public string deeplinkURL;
 
@@ -116,12 +116,12 @@ namespace Assets.Scripts
                                 var mesh = FastObjImporter.Instance.ImportContent(reader.ReadToEnd());
                                 LoadedMeshes = new[] {mesh};
 #else
-                                LoadedMeshes = ObjImporter.Process(reader);
+                                LoadedAssets = ObjImporter.Process(reader);
 #endif
                             }
                         }
 
-                        Log($"Imported {LoadedMeshes.Length} mesh(es) in {stopwatch.Elapsed.TotalSeconds:F3} sec");
+                        Log($"Imported {LoadedAssets.Length} mesh(es) in {stopwatch.Elapsed.TotalSeconds:F3} sec");
                     }
                     catch (Exception e)
                     {

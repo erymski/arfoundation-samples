@@ -5,9 +5,16 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Assets.Scripts
 {
+    public class AssetDescriptor
+    {
+        public Mesh Mesh { get; set; }
+        public Color Color { get; set; }
+    }
+
     public sealed class ObjImporter
     {
         #region Inner types
@@ -31,6 +38,7 @@ namespace Assets.Scripts
             private readonly string _name;
             public readonly List<int> triangles = new List<int>();
             public readonly List<Vector3Int> faceData = new List<Vector3Int>();
+            private readonly Random _random = new Random();
 
             public MeshCollector(string name)
             {
@@ -39,7 +47,7 @@ namespace Assets.Scripts
 
             public bool IsEmpty => triangles.Count == 0;
 
-            public Mesh ToMesh(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2> uv, IReadOnlyList<Vector3> normals)
+            public AssetDescriptor ToMesh(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2> uv, IReadOnlyList<Vector3> normals)
             {
                 if (IsEmpty) throw new Exception("Empty mesh");
 
@@ -75,13 +83,18 @@ namespace Assets.Scripts
 
 //                LogMessage($"Calculated {mesh.bounds}");
 
-                return mesh;
+                return new AssetDescriptor
+                {
+                    Color = new Color((float) _random.NextDouble(), (float) _random.NextDouble(),
+                        (float) _random.NextDouble()),
+                    Mesh = mesh
+                };
             }
         }
 
         #endregion
 
-        public static Mesh[] Process(StreamReader reader)
+        public static AssetDescriptor[] Process(StreamReader reader)
         {
             var vertices = new List<Vector3>();
             var uv = new List<Vector2>();
