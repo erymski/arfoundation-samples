@@ -39,6 +39,7 @@ namespace Assets.Scripts
             public readonly List<int> triangles = new List<int>();
             public readonly List<Vector3Int> faceData = new List<Vector3Int>();
             private readonly Random _random = new Random();
+            private static readonly Color _defaultColor = Color.gray;
 
             public MeshCollector(string name)
             {
@@ -46,6 +47,7 @@ namespace Assets.Scripts
             }
 
             public bool IsEmpty => triangles.Count == 0;
+            public string ColorString { get; set; }
 
             public AssetDescriptor ToMesh(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2> uv, IReadOnlyList<Vector3> normals)
             {
@@ -85,10 +87,28 @@ namespace Assets.Scripts
 
                 return new AssetDescriptor
                 {
-                    Color = new Color((float) _random.NextDouble(), (float) _random.NextDouble(),
-                        (float) _random.NextDouble()),
+                    Color = MakeColor(),
                     Mesh = mesh
                 };
+            }
+
+            private Color MakeColor()
+            {
+                while (! string.IsNullOrWhiteSpace(ColorString))
+                {
+                    var pieces = ColorString.Split(",".ToCharArray(), 3, StringSplitOptions.None);
+                    if (pieces.Length != 3) break;
+
+                    if (!int.TryParse(pieces[0], out var r)) break;
+                    if (!int.TryParse(pieces[1], out var g)) break;
+                    if (!int.TryParse(pieces[2], out var b)) break;
+
+                    var color = new Color(r/255f, g/255f, b/255f);
+                    //LogMessage($"Extracted color {color.ToString()}");
+                    return color;
+                }
+
+                return _defaultColor;
             }
         }
 
@@ -184,6 +204,10 @@ namespace Assets.Scripts
 
                         j++;
                     }
+                }
+                else if (cmd == 'u' && (collector.ColorString == null) && line.StartsWith("usemtl ")) // multiple colors are not supported
+                {
+                    collector.ColorString = line.Substring(7);
                 }
             }
 
