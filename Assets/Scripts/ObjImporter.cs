@@ -49,7 +49,7 @@ namespace Assets.Scripts
             public bool IsEmpty => triangles.Count == 0;
             public string ColorString { get; set; }
 
-            public AssetDescriptor ToMesh(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2> uv, IReadOnlyList<Vector3> normals)
+            public AssetDescriptor ToAsset(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2> uv, IReadOnlyList<Vector3> normals)
             {
                 if (IsEmpty) throw new Exception("Empty mesh");
 
@@ -96,6 +96,7 @@ namespace Assets.Scripts
             {
                 while (! string.IsNullOrWhiteSpace(ColorString))
                 {
+                    // it's a quick'n'dirty way to extract color from its name.  Proper solution is to read color from 'mtl' file. TODO
                     var pieces = ColorString.Split(",".ToCharArray(), 3, StringSplitOptions.None);
                     if (pieces.Length != 3) break;
 
@@ -126,6 +127,7 @@ namespace Assets.Scripts
 
             string objectName = null;
             int faceDataCount = 0;
+            string lastColor = null;
 
             var buffer = new StringBuilder();
 
@@ -140,6 +142,12 @@ namespace Assets.Scripts
 
                 if (cmd == 'g') // like `g cp4970-125pf-2-solid1`.  Name of a solid I guess.
                 {
+                    if ((collector != null) && (collector.ColorString == null))
+                    {
+                        // OBJ might contain solids, who uses color from the prev processed solid
+                        collector.ColorString = lastColor;
+                    }
+
                     collector = new MeshCollector(line.Substring(2));
                     collectors.Add(collector);
                     faceDataCount = 0;
@@ -207,13 +215,21 @@ namespace Assets.Scripts
                 }
                 else if (cmd == 'u' && (collector.ColorString == null) && line.StartsWith("usemtl ")) // multiple colors are not supported
                 {
-                    collector.ColorString = line.Substring(7);
+                    lastColor = line.Substring(7);
+
+                    if (collector.ColorString == null)
+                    {
+                        collector.ColorString = lastColor;
+                    }
                 }
             }
 
             LogMessage($"Collected {collectors.Count} meshes");
 
-            return collectors.Where(c => ! c.IsEmpty).Select(c => c.ToMesh(vertices, uv, normals)).ToArray();
+            return collectors
+                    .Where(c => ! c.IsEmpty)
+                    .Select(c => c.ToAsset(vertices, uv, normals))
+                    .ToArray();
         }
 
         private static float GetFloat(string line, ref int start, ref StringBuilder sbFloat) // TODO: speed up
